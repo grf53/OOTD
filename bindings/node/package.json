@@ -1,0 +1,21 @@
+{
+  "name": "@ootd/node",
+  "version": "0.1.0",
+  "description": "Node binding for OOTD via napi-rs",
+  "main": "api.js",
+  "types": "api.d.ts",
+  "files": [
+    "api.js",
+    "api.d.ts",
+    "index.js",
+    "index.d.ts",
+    "*.node"
+  ],
+  "scripts": {
+    "build": "napi build --platform --cargo-cwd ./rust",
+    "prepublishOnly": "npm run build"
+  },
+  "devDependencies": {
+    "@napi-rs/cli": "^2.18.4"
+  }
+}

@@ -1,0 +1,64 @@
+{
+  "between_cases": [
+    {
+      "name": "half_year_past_en",
+      "start": "2022-09-12T09:40:33Z",
+      "end": "2024-01-25T13:31:43Z",
+      "locale": "en",
+      "expected": "a year and a half ago"
+    },
+    {
+      "name": "half_month_ko",
+      "start": "2023-12-09T18:21:29Z",
+      "end": "2024-01-25T13:31:43Z",
+      "locale": "ko",
+      "expected": "1달 반 전"
+    },
+    {
+      "name": "half_month_ko_native",
+      "start": "2023-12-09T18:21:29Z",
+      "end": "2024-01-25T13:31:43Z",
+      "locale": "ko",
+      "use_native_ko_number": true,
+      "expected": "한 달 반 전"
+    },
+    {
+      "name": "past_same_night_en",
+      "start": "2024-01-25T20:30:00Z",
+      "end": "2024-01-25T23:30:00Z",
+      "locale": "en",
+      "expected": "earlier tonight"
+    },
+    {
+      "name": "future_daypart_ko",
+      "start": "2024-01-25T13:31:43Z",
+      "end": "2024-01-24T20:29:54Z",
+      "locale": "ko",
+      "expected": "내일 낮"
+    }
+  ],
+  "duration_cases": [
+    {
+      "name": "duration_ok_ko",
+      "seconds": 5400,
+      "is_future": false,
+      "locale": "ko",
+      "expected": "1시간 반 전"
+    },
+    {
+      "name": "duration_ok_ko_native",
+      "seconds": 5400,
+      "is_future": false,
+      "locale": "ko",
+      "use_native_ko_number": true,
+      "expected": "한 시간 반 전"
+    },
+    {
+      "name": "duration_negative_error",
+      "seconds": -1,
+      "is_future": false,
+      "locale": "en",
+      "expected_error": "negative duration is not allowed"
+    }
+  ]
+}

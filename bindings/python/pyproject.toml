@@ -1,0 +1,19 @@
+[build-system]
+requires = ["maturin>=1.6,<2"]
+build-backend = "maturin"
+
+[project]
+name = "ootd"
+version = "0.1.0"
+description = "Outstandingly Obvious Time Delta"
+requires-python = ">=3.8"
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Rust",
+]
+
+[tool.maturin]
+module-name = "ootd._native"
+python-source = "."
+bindings = "pyo3"
+manifest-path = "./rust/Cargo.toml"

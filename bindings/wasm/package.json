@@ -1,0 +1,15 @@
+{
+  "name": "@ootd/wasm",
+  "version": "0.1.0",
+  "description": "Browser/WebAssembly binding for OOTD",
+  "type": "module",
+  "files": [
+    "pkg"
+  ],
+  "scripts": {
+    "build": "wasm-pack build ./rust --target bundler --out-dir ./pkg && node ./scripts/patch-types.mjs"
+  },
+  "devDependencies": {
+    "wasm-pack": "^0.13.1"
+  }
+}
