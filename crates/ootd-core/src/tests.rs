@@ -67,6 +67,103 @@ fn rounds_up_hours_from_fifty_minutes() {
 }
 
 #[test]
+fn uses_half_for_hours_from_twenty_minutes() {
+    let before = from_duration((2 * 60 * 60) + (19 * 60) + 59, Locale::En, Direction::Past)
+        .expect("valid duration");
+    assert_eq!(before, "2 hours ago");
+
+    let at = from_duration((2 * 60 * 60) + (20 * 60), Locale::En, Direction::Past)
+        .expect("valid duration");
+    assert_eq!(at, "2 hours and a half ago");
+
+    let at_ko = from_duration((2 * 60 * 60) + (20 * 60), Locale::Ko, Direction::Past)
+        .expect("valid duration");
+    assert_eq!(at_ko, "2시간 반 전");
+}
+
+#[test]
+fn starts_month_labels_five_days_early_with_first_month_exception() {
+    const DAY_SECONDS: i64 = 24 * 60 * 60;
+
+    let before_four_weeks = from_duration((25 * DAY_SECONDS) - 1, Locale::En, Direction::Past)
+        .expect("valid duration");
+    assert_eq!(before_four_weeks, "3 weeks ago");
+
+    let at_four_weeks = from_duration(25 * DAY_SECONDS, Locale::En, Direction::Past)
+        .expect("valid duration");
+    assert_eq!(at_four_weeks, "4 weeks ago");
+
+    let at_29_days = from_duration(29 * DAY_SECONDS, Locale::Ko, Direction::Past)
+        .expect("valid duration");
+    assert_eq!(at_29_days, "4주 전");
+
+    let at_month = from_duration(30 * DAY_SECONDS, Locale::En, Direction::Past)
+        .expect("valid duration");
+    assert_eq!(at_month, "a month ago");
+
+    let before_half = from_duration((40 * DAY_SECONDS) - 1, Locale::Ko, Direction::Past)
+        .expect("valid duration");
+    assert_eq!(before_half, "1달 전");
+
+    let at_half = from_duration(40 * DAY_SECONDS, Locale::Ko, Direction::Past)
+        .expect("valid duration");
+    assert_eq!(at_half, "1달 반 전");
+
+    let at_next_month = from_duration(55 * DAY_SECONDS, Locale::En, Direction::Past)
+        .expect("valid duration");
+    assert_eq!(at_next_month, "2 months ago");
+}
+
+#[test]
+fn rounds_up_weeks_from_four_days() {
+    const DAY_SECONDS: i64 = 24 * 60 * 60;
+
+    let ten_days = from_duration(10 * DAY_SECONDS, Locale::Ko, Direction::Past).expect("valid duration");
+    assert_eq!(ten_days, "1주 전");
+
+    let eleven_days = from_duration(11 * DAY_SECONDS, Locale::Ko, Direction::Past).expect("valid duration");
+    assert_eq!(eleven_days, "2주 전");
+
+    let seventeen_days = from_duration(17 * DAY_SECONDS, Locale::En, Direction::Past).expect("valid duration");
+    assert_eq!(seventeen_days, "2 weeks ago");
+
+    let eighteen_days = from_duration(18 * DAY_SECONDS, Locale::En, Direction::Past).expect("valid duration");
+    assert_eq!(eighteen_days, "3 weeks ago");
+}
+
+#[test]
+fn rounds_up_years_from_ten_months() {
+    const MONTH_SECONDS: i64 = 30 * 24 * 60 * 60;
+    const DAY_SECONDS: i64 = 24 * 60 * 60;
+    let ten_months = 10 * MONTH_SECONDS;
+    let eleven_half_months = (11 * MONTH_SECONDS) + (15 * DAY_SECONDS);
+    let sixteen_months = 16 * MONTH_SECONDS;
+    let thirty_four_months = 34 * MONTH_SECONDS;
+
+    let at_ten_months = from_duration(ten_months, Locale::En, Direction::Past).expect("valid duration");
+    assert_eq!(at_ten_months, "10 months ago");
+
+    let at_eleven_half_months =
+        from_duration(eleven_half_months, Locale::En, Direction::Past).expect("valid duration");
+    assert_eq!(at_eleven_half_months, "a year ago");
+
+    let at_sixteen_months = from_duration(sixteen_months, Locale::En, Direction::Past).expect("valid duration");
+    assert_eq!(at_sixteen_months, "a year and a half ago");
+
+    let before_thirty_four = from_duration(thirty_four_months - 1, Locale::En, Direction::Past)
+        .expect("valid duration");
+    assert_eq!(before_thirty_four, "2 years and a half ago");
+
+    let at_thirty_four = from_duration(thirty_four_months, Locale::En, Direction::Past)
+        .expect("valid duration");
+    assert_eq!(at_thirty_four, "3 years ago");
+
+    let at_thirty_four_ko = from_duration(thirty_four_months, Locale::Ko, Direction::Past)
+        .expect("valid duration");
+    assert_eq!(at_thirty_four_ko, "3년 전");
+}
+
+#[test]
 fn does_not_use_half_for_minutes() {
     let en = from_duration(90, Locale::En, Direction::Past).expect("valid duration");
     assert_eq!(en, "a minute ago");

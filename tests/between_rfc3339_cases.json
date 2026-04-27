@@ -319,14 +319,14 @@
     "locale": "en",
     "start": "2024-01-25T12:01:44Z",
     "end": "2024-01-25T13:31:43Z",
-    "expected": "an hour ago"
+    "expected": "an hour and a half ago"
   },
   {
     "name": "transition_p0005399s_ko",
     "locale": "ko",
     "start": "2024-01-25T12:01:44Z",
     "end": "2024-01-25T13:31:43Z",
-    "expected": "1시간 전"
+    "expected": "1시간 반 전"
   },
   {
     "name": "transition_p0005400s_en",
@@ -375,14 +375,14 @@
     "locale": "en",
     "start": "2024-01-25T11:01:44Z",
     "end": "2024-01-25T13:31:43Z",
-    "expected": "2 hours ago"
+    "expected": "2 hours and a half ago"
   },
   {
     "name": "transition_p0008999s_ko",
     "locale": "ko",
     "start": "2024-01-25T11:01:44Z",
     "end": "2024-01-25T13:31:43Z",
-    "expected": "2시간 전"
+    "expected": "2시간 반 전"
   },
   {
     "name": "transition_p0009000s_en",
@@ -665,18 +665,46 @@
     "expected": "1주 전"
   },
   {
+    "name": "transition_p0950399s_en",
+    "locale": "en",
+    "start": "2024-01-14T13:31:44Z",
+    "end": "2024-01-25T13:31:43Z",
+    "expected": "a week ago"
+  },
+  {
+    "name": "transition_p0950399s_ko",
+    "locale": "ko",
+    "start": "2024-01-14T13:31:44Z",
+    "end": "2024-01-25T13:31:43Z",
+    "expected": "1주 전"
+  },
+  {
+    "name": "transition_p0950400s_en",
+    "locale": "en",
+    "start": "2024-01-14T13:31:43Z",
+    "end": "2024-01-25T13:31:43Z",
+    "expected": "2 weeks ago"
+  },
+  {
+    "name": "transition_p0950400s_ko",
+    "locale": "ko",
+    "start": "2024-01-14T13:31:43Z",
+    "end": "2024-01-25T13:31:43Z",
+    "expected": "2주 전"
+  },
+  {
     "name": "transition_p1209599s_en",
     "locale": "en",
     "start": "2024-01-11T13:31:44Z",
     "end": "2024-01-25T13:31:43Z",
-    "expected": "a week ago"
+    "expected": "2 weeks ago"
   },
   {
     "name": "transition_p1209599s_ko",
     "locale": "ko",
     "start": "2024-01-11T13:31:44Z",
     "end": "2024-01-25T13:31:43Z",
-    "expected": "1주 전"
+    "expected": "2주 전"
   },
   {
     "name": "transition_p1209600s_en",
@@ -691,6 +719,34 @@
     "start": "2024-01-11T13:31:43Z",
     "end": "2024-01-25T13:31:43Z",
     "expected": "2주 전"
+  },
+  {
+    "name": "transition_p1987199s_en",
+    "locale": "en",
+    "start": "2024-01-02T13:31:44Z",
+    "end": "2024-01-25T13:31:43Z",
+    "expected": "3 weeks ago"
+  },
+  {
+    "name": "transition_p1987199s_ko",
+    "locale": "ko",
+    "start": "2024-01-02T13:31:44Z",
+    "end": "2024-01-25T13:31:43Z",
+    "expected": "3주 전"
+  },
+  {
+    "name": "transition_p1987200s_en",
+    "locale": "en",
+    "start": "2024-01-02T13:31:43Z",
+    "end": "2024-01-25T13:31:43Z",
+    "expected": "3 weeks ago"
+  },
+  {
+    "name": "transition_p1987200s_ko",
+    "locale": "ko",
+    "start": "2024-01-02T13:31:43Z",
+    "end": "2024-01-25T13:31:43Z",
+    "expected": "3주 전"
   },
   {
     "name": "transition_p2591999s_en",
@@ -721,18 +777,46 @@
     "expected": "1달 전"
   },
   {
+    "name": "transition_p3283199s_en",
+    "locale": "en",
+    "start": "2023-12-18T13:31:44Z",
+    "end": "2024-01-25T13:31:43Z",
+    "expected": "a month ago"
+  },
+  {
+    "name": "transition_p3283199s_ko",
+    "locale": "ko",
+    "start": "2023-12-18T13:31:44Z",
+    "end": "2024-01-25T13:31:43Z",
+    "expected": "1달 전"
+  },
+  {
+    "name": "transition_p3283200s_en",
+    "locale": "en",
+    "start": "2023-12-18T13:31:43Z",
+    "end": "2024-01-25T13:31:43Z",
+    "expected": "a month ago"
+  },
+  {
+    "name": "transition_p3283200s_ko",
+    "locale": "ko",
+    "start": "2023-12-18T13:31:43Z",
+    "end": "2024-01-25T13:31:43Z",
+    "expected": "1달 전"
+  },
+  {
     "name": "transition_p3887999s_en",
     "locale": "en",
     "start": "2023-12-11T13:31:44Z",
     "end": "2024-01-25T13:31:43Z",
-    "expected": "a month ago"
+    "expected": "a month and a half ago"
   },
   {
     "name": "transition_p3887999s_ko",
     "locale": "ko",
     "start": "2023-12-11T13:31:44Z",
     "end": "2024-01-25T13:31:43Z",
-    "expected": "1달 전"
+    "expected": "1달 반 전"
   },
   {
     "name": "transition_p3888000s_en",
@@ -749,18 +833,46 @@
     "expected": "1달 반 전"
   },
   {
+    "name": "transition_p4579199s_en",
+    "locale": "en",
+    "start": "2023-12-03T13:31:44Z",
+    "end": "2024-01-25T13:31:43Z",
+    "expected": "a month and a half ago"
+  },
+  {
+    "name": "transition_p4579199s_ko",
+    "locale": "ko",
+    "start": "2023-12-03T13:31:44Z",
+    "end": "2024-01-25T13:31:43Z",
+    "expected": "1달 반 전"
+  },
+  {
+    "name": "transition_p4579200s_en",
+    "locale": "en",
+    "start": "2023-12-03T13:31:43Z",
+    "end": "2024-01-25T13:31:43Z",
+    "expected": "a month and a half ago"
+  },
+  {
+    "name": "transition_p4579200s_ko",
+    "locale": "ko",
+    "start": "2023-12-03T13:31:43Z",
+    "end": "2024-01-25T13:31:43Z",
+    "expected": "1달 반 전"
+  },
+  {
     "name": "transition_p5183999s_en",
     "locale": "en",
     "start": "2023-11-26T13:31:44Z",
     "end": "2024-01-25T13:31:43Z",
-    "expected": "a month and a half ago"
+    "expected": "2 months ago"
   },
   {
     "name": "transition_p5183999s_ko",
     "locale": "ko",
     "start": "2023-11-26T13:31:44Z",
     "end": "2024-01-25T13:31:43Z",
-    "expected": "1달 반 전"
+    "expected": "2달 전"
   },
   {
     "name": "transition_p5184000s_en",
@@ -781,14 +893,14 @@
     "locale": "en",
     "start": "2023-01-25T13:31:44Z",
     "end": "2024-01-25T13:31:43Z",
-    "expected": "12 months ago"
+    "expected": "a year ago"
   },
   {
     "name": "transition_p31535999s_ko",
     "locale": "ko",
     "start": "2023-01-25T13:31:44Z",
     "end": "2024-01-25T13:31:43Z",
-    "expected": "12달 전"
+    "expected": "1년 전"
   },
   {
     "name": "transition_p31536000s_en",
@@ -837,14 +949,14 @@
     "locale": "en",
     "start": "2022-01-25T13:31:44Z",
     "end": "2024-01-25T13:31:43Z",
-    "expected": "a year and a half ago"
+    "expected": "2 years ago"
   },
   {
     "name": "transition_p63071999s_ko",
     "locale": "ko",
     "start": "2022-01-25T13:31:44Z",
     "end": "2024-01-25T13:31:43Z",
-    "expected": "1년 반 전"
+    "expected": "2년 전"
   },
   {
     "name": "transition_p63072000s_en",
@@ -861,6 +973,62 @@
     "expected": "2년 전"
   },
   {
+    "name": "transition_p88127999s_en",
+    "locale": "en",
+    "start": "2021-04-10T13:31:44Z",
+    "end": "2024-01-25T13:31:43Z",
+    "expected": "2 years and a half ago"
+  },
+  {
+    "name": "transition_p88127999s_ko",
+    "locale": "ko",
+    "start": "2021-04-10T13:31:44Z",
+    "end": "2024-01-25T13:31:43Z",
+    "expected": "2년 반 전"
+  },
+  {
+    "name": "transition_p88128000s_en",
+    "locale": "en",
+    "start": "2021-04-10T13:31:43Z",
+    "end": "2024-01-25T13:31:43Z",
+    "expected": "3 years ago"
+  },
+  {
+    "name": "transition_p88128000s_ko",
+    "locale": "ko",
+    "start": "2021-04-10T13:31:43Z",
+    "end": "2024-01-25T13:31:43Z",
+    "expected": "3년 전"
+  },
+  {
+    "name": "transition_p88991999s_en",
+    "locale": "en",
+    "start": "2021-03-31T13:31:44Z",
+    "end": "2024-01-25T13:31:43Z",
+    "expected": "3 years ago"
+  },
+  {
+    "name": "transition_p88991999s_ko",
+    "locale": "ko",
+    "start": "2021-03-31T13:31:44Z",
+    "end": "2024-01-25T13:31:43Z",
+    "expected": "3년 전"
+  },
+  {
+    "name": "transition_p88992000s_en",
+    "locale": "en",
+    "start": "2021-03-31T13:31:43Z",
+    "end": "2024-01-25T13:31:43Z",
+    "expected": "3 years ago"
+  },
+  {
+    "name": "transition_p88992000s_ko",
+    "locale": "ko",
+    "start": "2021-03-31T13:31:43Z",
+    "end": "2024-01-25T13:31:43Z",
+    "expected": "3년 전"
+  },
+  {
     "name": "ko_native_month_between",
     "locale": "ko",
     "start": "2023-12-09T18:21:29Z",
@@ -875,5 +1043,117 @@
     "end": "2024-01-25T13:31:43Z",
     "use_native_ko_number": true,
     "expected": "두 시간 전"
+  },
+  {
+    "name": "transition_p2159999s_en",
+    "locale": "en",
+    "start": "2023-12-31T13:31:44Z",
+    "end": "2024-01-25T13:31:43Z",
+    "expected": "3 weeks ago"
+  },
+  {
+    "name": "transition_p2159999s_ko",
+    "locale": "ko",
+    "start": "2023-12-31T13:31:44Z",
+    "end": "2024-01-25T13:31:43Z",
+    "expected": "3주 전"
+  },
+  {
+    "name": "transition_p2160000s_en",
+    "locale": "en",
+    "start": "2023-12-31T13:31:43Z",
+    "end": "2024-01-25T13:31:43Z",
+    "expected": "4 weeks ago"
+  },
+  {
+    "name": "transition_p2160000s_ko",
+    "locale": "ko",
+    "start": "2023-12-31T13:31:43Z",
+    "end": "2024-01-25T13:31:43Z",
+    "expected": "4주 전"
+  },
+  {
+    "name": "transition_p3455999s_en",
+    "locale": "en",
+    "start": "2023-12-16T13:31:44Z",
+    "end": "2024-01-25T13:31:43Z",
+    "expected": "a month ago"
+  },
+  {
+    "name": "transition_p3455999s_ko",
+    "locale": "ko",
+    "start": "2023-12-16T13:31:44Z",
+    "end": "2024-01-25T13:31:43Z",
+    "expected": "1달 전"
+  },
+  {
+    "name": "transition_p3456000s_en",
+    "locale": "en",
+    "start": "2023-12-16T13:31:43Z",
+    "end": "2024-01-25T13:31:43Z",
+    "expected": "a month and a half ago"
+  },
+  {
+    "name": "transition_p3456000s_ko",
+    "locale": "ko",
+    "start": "2023-12-16T13:31:43Z",
+    "end": "2024-01-25T13:31:43Z",
+    "expected": "1달 반 전"
+  },
+  {
+    "name": "transition_p4751999s_en",
+    "locale": "en",
+    "start": "2023-12-01T13:31:44Z",
+    "end": "2024-01-25T13:31:43Z",
+    "expected": "a month and a half ago"
+  },
+  {
+    "name": "transition_p4751999s_ko",
+    "locale": "ko",
+    "start": "2023-12-01T13:31:44Z",
+    "end": "2024-01-25T13:31:43Z",
+    "expected": "1달 반 전"
+  },
+  {
+    "name": "transition_p4752000s_en",
+    "locale": "en",
+    "start": "2023-12-01T13:31:43Z",
+    "end": "2024-01-25T13:31:43Z",
+    "expected": "2 months ago"
+  },
+  {
+    "name": "transition_p4752000s_ko",
+    "locale": "ko",
+    "start": "2023-12-01T13:31:43Z",
+    "end": "2024-01-25T13:31:43Z",
+    "expected": "2달 전"
+  },
+  {
+    "name": "transition_p29807999s_en",
+    "locale": "en",
+    "start": "2023-02-14T13:31:44Z",
+    "end": "2024-01-25T13:31:43Z",
+    "expected": "11 months and a half ago"
+  },
+  {
+    "name": "transition_p29807999s_ko",
+    "locale": "ko",
+    "start": "2023-02-14T13:31:44Z",
+    "end": "2024-01-25T13:31:43Z",
+    "expected": "11달 반 전"
+  },
+  {
+    "name": "transition_p29808000s_en",
+    "locale": "en",
+    "start": "2023-02-14T13:31:43Z",
+    "end": "2024-01-25T13:31:43Z",
+    "expected": "a year ago"
+  },
+  {
+    "name": "transition_p29808000s_ko",
+    "locale": "ko",
+    "start": "2023-02-14T13:31:43Z",
+    "end": "2024-01-25T13:31:43Z",
+    "expected": "1년 전"
   }
 ]

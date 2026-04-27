@@ -7,7 +7,7 @@
     "pkg"
   ],
   "scripts": {
-    "build": "wasm-pack build ./rust --target bundler --out-dir ./pkg && node ./scripts/patch-types.mjs"
+    "build": "wasm-pack build ./rust --target bundler --out-dir ../pkg && node ./scripts/patch-types.mjs"
   },
   "devDependencies": {
     "wasm-pack": "^0.13.1"

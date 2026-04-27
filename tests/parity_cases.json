@@ -54,6 +54,209 @@
       "expected": "한 시간 반 전"
     },
     {
+      "name": "duration_hour_half_below_threshold_en",
+      "seconds": 8399,
+      "is_future": false,
+      "locale": "en",
+      "expected": "2 hours ago"
+    },
+    {
+      "name": "duration_hour_half_below_threshold_ko",
+      "seconds": 8399,
+      "is_future": false,
+      "locale": "ko",
+      "expected": "2시간 전"
+    },
+    {
+      "name": "duration_hour_half_threshold_en",
+      "seconds": 8400,
+      "is_future": false,
+      "locale": "en",
+      "expected": "2 hours and a half ago"
+    },
+    {
+      "name": "duration_hour_half_threshold_ko",
+      "seconds": 8400,
+      "is_future": false,
+      "locale": "ko",
+      "expected": "2시간 반 전"
+    },
+    {
+      "name": "duration_year_round_below_threshold_en",
+      "seconds": 88127999,
+      "is_future": false,
+      "locale": "en",
+      "expected": "2 years and a half ago"
+    },
+    {
+      "name": "duration_year_round_below_threshold_ko",
+      "seconds": 88127999,
+      "is_future": false,
+      "locale": "ko",
+      "expected": "2년 반 전"
+    },
+    {
+      "name": "duration_year_round_threshold_en",
+      "seconds": 88128000,
+      "is_future": false,
+      "locale": "en",
+      "expected": "3 years ago"
+    },
+    {
+      "name": "duration_year_round_threshold_ko",
+      "seconds": 88128000,
+      "is_future": false,
+      "locale": "ko",
+      "expected": "3년 전"
+    },
+    {
+      "name": "duration_year_start_threshold_en",
+      "seconds": 29808000,
+      "is_future": false,
+      "locale": "en",
+      "expected": "a year ago"
+    },
+    {
+      "name": "duration_year_start_threshold_ko",
+      "seconds": 29808000,
+      "is_future": false,
+      "locale": "ko",
+      "expected": "1년 전"
+    },
+    {
+      "name": "duration_year_start_below_threshold_en",
+      "seconds": 29807999,
+      "is_future": false,
+      "locale": "en",
+      "expected": "11 months and a half ago"
+    },
+    {
+      "name": "duration_year_start_below_threshold_ko",
+      "seconds": 29807999,
+      "is_future": false,
+      "locale": "ko",
+      "expected": "11달 반 전"
+    },
+    {
+      "name": "duration_week_round_10days_en",
+      "seconds": 864000,
+      "is_future": false,
+      "locale": "en",
+      "expected": "a week ago"
+    },
+    {
+      "name": "duration_week_round_10days_ko",
+      "seconds": 864000,
+      "is_future": false,
+      "locale": "ko",
+      "expected": "1주 전"
+    },
+    {
+      "name": "duration_week_round_11days_en",
+      "seconds": 950400,
+      "is_future": false,
+      "locale": "en",
+      "expected": "2 weeks ago"
+    },
+    {
+      "name": "duration_week_round_11days_ko",
+      "seconds": 950400,
+      "is_future": false,
+      "locale": "ko",
+      "expected": "2주 전"
+    },
+    {
+      "name": "duration_month_start_below_threshold_en",
+      "seconds": 1987199,
+      "is_future": false,
+      "locale": "en",
+      "expected": "3 weeks ago"
+    },
+    {
+      "name": "duration_month_start_below_threshold_ko",
+      "seconds": 1987199,
+      "is_future": false,
+      "locale": "ko",
+      "expected": "3주 전"
+    },
+    {
+      "name": "duration_month_start_threshold_en",
+      "seconds": 2592000,
+      "is_future": false,
+      "locale": "en",
+      "expected": "a month ago"
+    },
+    {
+      "name": "duration_month_start_threshold_ko",
+      "seconds": 2592000,
+      "is_future": false,
+      "locale": "ko",
+      "expected": "1달 전"
+    },
+    {
+      "name": "duration_month_start_exception_23d_en",
+      "seconds": 1987200,
+      "is_future": false,
+      "locale": "en",
+      "expected": "3 weeks ago"
+    },
+    {
+      "name": "duration_month_start_exception_23d_ko",
+      "seconds": 1987200,
+      "is_future": false,
+      "locale": "ko",
+      "expected": "3주 전"
+    },
+    {
+      "name": "duration_month_start_exception_29d_en",
+      "seconds": 2505600,
+      "is_future": false,
+      "locale": "en",
+      "expected": "4 weeks ago"
+    },
+    {
+      "name": "duration_month_start_exception_29d_ko",
+      "seconds": 2505600,
+      "is_future": false,
+      "locale": "ko",
+      "expected": "4주 전"
+    },
+    {
+      "name": "duration_month_half_below_threshold_en",
+      "seconds": 3455999,
+      "is_future": false,
+      "locale": "en",
+      "expected": "a month ago"
+    },
+    {
+      "name": "duration_month_half_threshold_en",
+      "seconds": 3456000,
+      "is_future": false,
+      "locale": "en",
+      "expected": "a month and a half ago"
+    },
+    {
+      "name": "duration_month_half_threshold_ko",
+      "seconds": 3456000,
+      "is_future": false,
+      "locale": "ko",
+      "expected": "1달 반 전"
+    },
+    {
+      "name": "duration_month_next_threshold_en",
+      "seconds": 4752000,
+      "is_future": false,
+      "locale": "en",
+      "expected": "2 months ago"
+    },
+    {
+      "name": "duration_month_next_threshold_ko",
+      "seconds": 4752000,
+      "is_future": false,
+      "locale": "ko",
+      "expected": "2달 전"
+    },
+    {
       "name": "duration_negative_error",
       "seconds": -1,
       "is_future": false,
