@@ -161,3 +161,20 @@ cython_debug/
 
 .DS_Store
 
+# Rust
+/target/
+Cargo.lock
+
+# Node
+node_modules/
+bindings/node/*.node
+bindings/wasm/pkg/
+
+# Java / Gradle
+.gradle/
+bindings/java/build/
+bindings/kotlin/build/
+
+# Swift
+bindings/swift/.build/
+bindings/swift/.swiftpm/

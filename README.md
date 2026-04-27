@@ -1,83 +1,250 @@
-# Outstandingly Obvious Time Delta
+# Outstandingly Obvious Time Delta (OOTD)
 
-This provides "more intuitive" time-reading strings.
+OOTD renders time deltas in human phrases that feel more intuitive than strict numeric time strings.
 
+This repository is implemented as a Rust-first multi-binding project.
 
-## Installation
+## Architecture
 
-Install OOTD with `pip`
+- `crates/ootd-core`: pure Rust domain logic (`between`, `from_duration`)
+- `crates/ootd-ffi-c`: C ABI layer for low-level interop (`cbindgen`, Java/Swift FFI path)
+- `bindings/python/rust`: Python native extension crate (`PyO3`)
+- `bindings/node/rust`: Node.js native addon (`napi-rs`)
+- `bindings/wasm/rust`: Browser/WebAssembly binding (`wasm-bindgen`)
+- `bindings/python`: Python package layout and tests (`maturin` project)
+- `bindings/java`: Java FFM wrapper and Gradle project
+- `bindings/kotlin`: Kotlin/JVM wrapper over Java FFM layer
+- `bindings/node`: Node package scaffolding
+- `bindings/wasm`: wasm package scaffolding
+- `bindings/swift`: Swift package over C FFI (`dlopen`/`dlsym`)
+
+## Supported Locale (v1)
+
+- `en`
+- `ko`
+
+## Time Input Contract
+
+- `between` requires timezone-aware RFC3339 timestamps (`Z` or `+/-hh:mm` offsets)
+- Naive datetime values are rejected by design
+- Delta magnitude is computed on absolute instants (UTC-equivalent comparison)
+- Daypart labels (`dawn/morning/...`, `새벽/아침/...`) are anchored to the `end` timestamp timezone offset
+- Mixed offsets are allowed; `start` is converted to the `end` offset before daypart labeling
+- `ko` only: optionally enable native Korean numerals for `시간` and `달` units (`1 -> 한`, `2 -> 두`, ...)
+
+## Core Rust API
+
+```rust
+use ootd_core::{
+    between_rfc3339, between_rfc3339_with_options, from_duration, Direction, Locale, RenderOptions,
+};
+
+let phrase = between_rfc3339(
+    "2023-12-09T18:21:29Z",
+    "2024-01-25T13:31:43Z",
+    Locale::En,
+)?;
+assert_eq!(phrase, "a month and a half ago");
+
+let mixed_en = between_rfc3339(
+    "2024-01-25T01:30:00+09:00",
+    "2024-01-25T13:00:00Z",
+    Locale::En,
+)?;
+assert_eq!(mixed_en, "yesterday afternoon");
+
+let mixed_ko = between_rfc3339(
+    "2024-01-25T01:30:00+09:00",
+    "2024-01-25T13:00:00Z",
+    Locale::Ko,
+)?;
+assert_eq!(mixed_ko, "어제 낮");
+
+let native_ko = between_rfc3339_with_options(
+    "2023-12-09T18:21:29Z",
+    "2024-01-25T13:31:43Z",
+    Locale::Ko,
+    RenderOptions {
+        ko_native_numerals: true,
+    },
+)?;
+assert_eq!(native_ko, "한 달 반 전");
+
+let phrase = from_duration(90 * 60, Locale::Ko, Direction::Past)?;
+assert_eq!(phrase, "1시간 반 전");
+
+let err = from_duration(-1, Locale::En, Direction::Past);
+assert!(err.is_err());
+```
+
+## Python (PyO3)
+
+Build/install locally:
 
 ```bash
-  pip install ootd
+cd bindings/python
+maturin develop
 ```
-    
-## Environment Variables
 
-`OOTD_DEFAULT_LOCALE`: Locale string that would be set as the default locale if this is not set, default value would be `'C'`.
-
-
-## Examples
-
-|prev|now|timedelta|YT|OOTD|
-|---|---|---|---|---|
-|2021-04-30T11:57:16Z|2024-01-25T13:31:43Z|(days=1000, ...)|2년 전|3년 전|
-|2022-09-12T09:40:33Z|2024-01-25T13:31:43Z|(days=500, ...)|1년 전|1년반 전|
-|2023-12-09T18:21:29Z|2024-01-25T13:31:43Z|(days=48, ...)|1개월 전|한 달 반 전|
-|2024-01-12T14:42:11Z|2024-01-25T13:31:43Z|(days=13, ...)|1주 전|2주 전|
-|2024-01-24T20:29:54Z|2024-01-25T13:31:43Z|(hours=6, ...)|17시간 전|어제 밤|
-|2024-01-25T03:29:54Z|2024-01-25T13:31:43Z|(hours=9, ...)|10시간 전|오늘 새벽|
-|2024-01-25T12:08:43Z|2024-01-25T13:31:43Z|(hours=1, minutes=23, ...)|1시간 전|1시간반 전|
-|2024-01-25T12:37:43Z|2024-01-25T13:31:43Z|(minutes=54, ...)|54분 전|54분 전|
-
-
-
-## Usage
+Usage:
 
 ```python
-from datetime import datetime, timedelta
-from ootd import OOTD
+import ootd
+from datetime import datetime, timezone, timedelta
 
-td = timedelta(days=100)
-ootd_100days = OOTD.from_timedelta(td)
-
-print(ootd_100days)         # 3 months later
-
-now = datetime.utcnow()
-a_week_ago = now - timedelta(days=7, hours=4, minutes=32, seconds=19)
-ootd_a_week = OOTD.between(a_week_ago, now)
-
-print(ootd_a_week)          # a week ago
+start = datetime.now(timezone.utc) - timedelta(days=48)
+end = datetime.now(timezone.utc)
+print(ootd.between(start, end, "en"))
+print(ootd.from_duration(90 * 60, False, "ko"))
+print(ootd.from_duration(timedelta(minutes=90), False, "ko"))  # timedelta 입력 허용
+print(ootd.from_duration(90 * 60 + 0.9, False, "ko"))  # float은 내부에서 int로 변환
+print(ootd.from_duration(90 * 60, False, "ko", True))  # 한 시간 반 전
+# raises ValueError: negative duration is not allowed: -1
+# ootd.from_duration(-1, False, "en")
 ```
 
-### Language
-```python
-from datetime import datetime, timedelta
-from ootd import OOTD
+Notes:
 
-td = timedelta(days=100)
-ootd_100days = OOTD.from_timedelta(td, locale="ko_KR.UTF-8")
+- `bindings/python/rust/build.rs` auto-generates `bindings/python/ootd/__init__.pyi` during build.
+- `ootd` is a pure-Python wrapper over `ootd._native`, so monkeypatching is straightforward (`ootd.between`, `ootd._between_impl`, etc.).
 
-print(ootd_100days)         # 3개월 후
+## TypeScript Node (napi-rs)
 
-import os
-
-os.environ["OOTD_DEFAULT_LOCALE"] = "ko_KR.UTF-8"
-now = datetime.utcnow()
-a_week_ago = now - timedelta(days=7, hours=4, minutes=32, seconds=19)
-ootd_a_week = OOTD.interval_between(a_week_ago, now)
-
-print(ootd_a_week)          # 일주일 전
+```bash
+cd bindings/node
+npm install
+npm run build
 ```
 
-## Authors
+```ts
+import { between, fromDuration } from '@ootd/node'
+// locale type: "en" | "ko"
+// between input: RFC3339 string | Date | object with toISOString()
+// fromDuration input: number | bigint | duration-like object(total/asSeconds/toMillis)
 
-👤 Woorak Park
-- :octocat: GitHub: [grf53](https://www.github.com/grf53)
+console.log(between('2023-12-09T18:21:29Z', '2024-01-25T13:31:43Z', 'en'))
+console.log(between(new Date('2023-12-09T18:21:29Z'), new Date('2024-01-25T13:31:43Z'), 'en'))
+console.log(fromDuration(90 * 60, false, 'ko'))
+console.log(fromDuration({ asSeconds: () => 90 * 60 }, false, 'ko'))
+console.log(fromDuration(90 * 60, false, 'ko', true)) // 한 시간 반 전
+// throws Error: negative duration is not allowed: -1
+// fromDuration(-1, false, 'en')
+```
 
+Note: `Date` inputs are normalized via `toISOString()` (UTC `Z`). If you need a specific offset anchor for daypart labeling, pass explicit RFC3339 strings with that offset.
 
+## TypeScript Browser (wasm-bindgen)
 
+```bash
+cd bindings/wasm
+npm install
+npm run build
+```
+
+```ts
+import { between, fromDuration } from '@ootd/wasm/pkg/ootd_wasm'
+// locale type: "en" | "ko" (generated d.ts is patched after wasm build)
+
+console.log(between('2023-12-09T18:21:29Z', '2024-01-25T13:31:43Z', 'en'))
+console.log(fromDuration(90n * 60n, false, 'ko'))
+console.log(fromDuration(90n * 60n, false, 'ko', true)) // 한 시간 반 전
+// throws Error: negative duration is not allowed: -1
+// fromDuration(-1n, false, 'en')
+```
+
+## Java (Project Panama / FFM)
+
+Generate C header and optional Panama bindings:
+
+```bash
+./scripts/gen-c-header.sh
+./scripts/gen-java-bindings.sh
+```
+
+Build Java wrapper:
+
+```bash
+cd bindings/java
+gradle test --no-daemon
+```
+
+Usage:
+
+```java
+import java.time.Duration;
+import java.time.OffsetDateTime;
+
+String phrase = Ootd.between("2023-12-09T18:21:29Z", "2024-01-25T13:31:43Z", OotdLocale.EN);
+String phraseFromDateTime = Ootd.between(
+        OffsetDateTime.parse("2023-12-09T18:21:29Z"),
+        OffsetDateTime.parse("2024-01-25T13:31:43Z"),
+        OotdLocale.EN
+);
+String nativeKo = Ootd.between("2023-12-09T18:21:29Z", "2024-01-25T13:31:43Z", OotdLocale.KO, true);
+String fromDurationObject = Ootd.fromDuration(Duration.ofMinutes(90), false, OotdLocale.EN);
+// throws IllegalArgumentException for negative duration
+// Ootd.fromDuration(-1, false, OotdLocale.EN);
+```
+
+## Kotlin (JVM)
+
+Build/test:
+
+```bash
+cd bindings/kotlin
+gradle test --no-daemon
+```
+
+Usage:
+
+```kotlin
+import io.ootd.OotdLocale
+import io.ootd.kotlin.OotdKotlin
+import java.time.Duration
+
+println(OotdKotlin.between("2023-12-09T18:21:29Z", "2024-01-25T13:31:43Z", OotdLocale.EN))
+println(OotdKotlin.fromDuration(Duration.ofMinutes(90), false, OotdLocale.KO, true))
+```
+
+## Swift
+
+Build native library first:
+
+```bash
+cargo build -p ootd-ffi-c
+cd bindings/swift
+swift run ootd-parity
+```
+
+Usage:
+
+```swift
+import OOTD
+
+let phrase = try OOTD.between(
+    startRFC3339: "2023-12-09T18:21:29Z",
+    endRFC3339: "2024-01-25T13:31:43Z",
+    locale: .en
+)
+
+let ko = try OOTD.fromDuration(
+    seconds: 90 * 60,
+    isFuture: false,
+    locale: .ko,
+    useNativeKoNumber: true
+)
+```
+
+## Tooling
+
+- C header generation: `cbindgen` (`cbindgen.toml`)
+- Java binding generation: `jextract` (from generated `include/ootd.h`)
+- Shared parity fixtures: `tests/parity_cases.json` (`between_cases`, `duration_cases`)
+
+## CI
+
+GitHub Actions runs Rust checks/tests and validates multi-binding build commands.
 
 ## License
 
-[LICENSE.txt](https://github.com/grf53/OOTD/blob/main/LICENSE.txt): [LGPLv3](https://choosealicense.com/licenses/lgpl-3.0/)
-
+`LGPL-3.0` (see `LICENSE.txt`)
