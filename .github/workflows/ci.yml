@@ -1,0 +1,102 @@
+name: ci
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  rust:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - run: cargo fmt --all -- --check
+      - run: cargo test --workspace
+
+  python-binding:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install maturin pytest
+      - run: |
+          cd bindings/python
+          maturin develop
+          pytest tests
+
+  node-binding:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: |
+          cd bindings/node
+          npm ci
+          npm run build
+          node test/parity.test.mjs
+          node test/object-inputs.test.mjs
+
+  wasm-binding:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: cargo install wasm-pack
+      - run: |
+          cd bindings/wasm
+          npm ci
+          npm run build
+          node test/parity.test.mjs
+
+  java-binding:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '22'
+      - uses: gradle/actions/setup-gradle@v3
+      - run: cargo install cbindgen
+      - run: cargo build -p ootd-ffi-c
+      - run: |
+          ./scripts/gen-c-header.sh
+          cd bindings/java
+          gradle test --no-daemon
+
+  kotlin-binding:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '22'
+      - uses: gradle/actions/setup-gradle@v3
+      - run: |
+          cd bindings/kotlin
+          gradle test --no-daemon
+
+  swift-binding:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - run: cargo build -p ootd-ffi-c
+      - run: |
+          cd bindings/swift
+          swift run ootd-parity
