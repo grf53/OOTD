@@ -1,0 +1,10 @@
+language = "C"
+include_version = true
+pragma_once = true
+include_guard = "OOTD_FFI_H"
+
+[parse]
+parse_deps = false
+
+[export]
+include = ["OotdDurationInput", "ootd_between_rfc3339", "ootd_between_rfc3339_with_options", "ootd_from_duration", "ootd_from_duration_parts", "ootd_from_duration_parts_with_options", "ootd_free_string"]
