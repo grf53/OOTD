@@ -1129,30 +1129,30 @@
     "expected": "2달 전"
   },
   {
-    "name": "transition_p29807999s_en",
+    "name": "transition_p30239999s_en",
     "locale": "en",
-    "start": "2023-02-14T13:31:44Z",
+    "start": "2023-02-09T13:31:44Z",
     "end": "2024-01-25T13:31:43Z",
     "expected": "11 months and a half ago"
   },
   {
-    "name": "transition_p29807999s_ko",
+    "name": "transition_p30239999s_ko",
     "locale": "ko",
-    "start": "2023-02-14T13:31:44Z",
+    "start": "2023-02-09T13:31:44Z",
     "end": "2024-01-25T13:31:43Z",
     "expected": "11달 반 전"
   },
   {
-    "name": "transition_p29808000s_en",
+    "name": "transition_p30240000s_en",
     "locale": "en",
-    "start": "2023-02-14T13:31:43Z",
+    "start": "2023-02-09T13:31:43Z",
     "end": "2024-01-25T13:31:43Z",
     "expected": "a year ago"
   },
   {
-    "name": "transition_p29808000s_ko",
+    "name": "transition_p30240000s_ko",
     "locale": "ko",
-    "start": "2023-02-14T13:31:43Z",
+    "start": "2023-02-09T13:31:43Z",
     "end": "2024-01-25T13:31:43Z",
     "expected": "1년 전"
   }

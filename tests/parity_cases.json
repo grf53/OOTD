@@ -111,28 +111,28 @@
     },
     {
       "name": "duration_year_start_threshold_en",
-      "seconds": 29808000,
+      "seconds": 30240000,
       "is_future": false,
       "locale": "en",
       "expected": "a year ago"
     },
     {
       "name": "duration_year_start_threshold_ko",
-      "seconds": 29808000,
+      "seconds": 30240000,
       "is_future": false,
       "locale": "ko",
       "expected": "1년 전"
     },
     {
       "name": "duration_year_start_below_threshold_en",
-      "seconds": 29807999,
+      "seconds": 30239999,
       "is_future": false,
       "locale": "en",
       "expected": "11 months and a half ago"
     },
     {
       "name": "duration_year_start_below_threshold_ko",
-      "seconds": 29807999,
+      "seconds": 30239999,
       "is_future": false,
       "locale": "ko",
       "expected": "11달 반 전"

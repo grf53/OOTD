@@ -85,32 +85,32 @@ fn uses_half_for_hours_from_twenty_minutes() {
 fn starts_month_labels_five_days_early_with_first_month_exception() {
     const DAY_SECONDS: i64 = 24 * 60 * 60;
 
-    let before_four_weeks = from_duration((25 * DAY_SECONDS) - 1, Locale::En, Direction::Past)
-        .expect("valid duration");
+    let before_four_weeks =
+        from_duration((25 * DAY_SECONDS) - 1, Locale::En, Direction::Past).expect("valid duration");
     assert_eq!(before_four_weeks, "3 weeks ago");
 
-    let at_four_weeks = from_duration(25 * DAY_SECONDS, Locale::En, Direction::Past)
-        .expect("valid duration");
+    let at_four_weeks =
+        from_duration(25 * DAY_SECONDS, Locale::En, Direction::Past).expect("valid duration");
     assert_eq!(at_four_weeks, "4 weeks ago");
 
-    let at_29_days = from_duration(29 * DAY_SECONDS, Locale::Ko, Direction::Past)
-        .expect("valid duration");
+    let at_29_days =
+        from_duration(29 * DAY_SECONDS, Locale::Ko, Direction::Past).expect("valid duration");
     assert_eq!(at_29_days, "4주 전");
 
-    let at_month = from_duration(30 * DAY_SECONDS, Locale::En, Direction::Past)
-        .expect("valid duration");
+    let at_month =
+        from_duration(30 * DAY_SECONDS, Locale::En, Direction::Past).expect("valid duration");
     assert_eq!(at_month, "a month ago");
 
-    let before_half = from_duration((40 * DAY_SECONDS) - 1, Locale::Ko, Direction::Past)
-        .expect("valid duration");
+    let before_half =
+        from_duration((40 * DAY_SECONDS) - 1, Locale::Ko, Direction::Past).expect("valid duration");
     assert_eq!(before_half, "1달 전");
 
-    let at_half = from_duration(40 * DAY_SECONDS, Locale::Ko, Direction::Past)
-        .expect("valid duration");
+    let at_half =
+        from_duration(40 * DAY_SECONDS, Locale::Ko, Direction::Past).expect("valid duration");
     assert_eq!(at_half, "1달 반 전");
 
-    let at_next_month = from_duration(55 * DAY_SECONDS, Locale::En, Direction::Past)
-        .expect("valid duration");
+    let at_next_month =
+        from_duration(55 * DAY_SECONDS, Locale::En, Direction::Past).expect("valid duration");
     assert_eq!(at_next_month, "2 months ago");
 }
 
@@ -118,16 +118,20 @@ fn starts_month_labels_five_days_early_with_first_month_exception() {
 fn rounds_up_weeks_from_four_days() {
     const DAY_SECONDS: i64 = 24 * 60 * 60;
 
-    let ten_days = from_duration(10 * DAY_SECONDS, Locale::Ko, Direction::Past).expect("valid duration");
+    let ten_days =
+        from_duration(10 * DAY_SECONDS, Locale::Ko, Direction::Past).expect("valid duration");
     assert_eq!(ten_days, "1주 전");
 
-    let eleven_days = from_duration(11 * DAY_SECONDS, Locale::Ko, Direction::Past).expect("valid duration");
+    let eleven_days =
+        from_duration(11 * DAY_SECONDS, Locale::Ko, Direction::Past).expect("valid duration");
     assert_eq!(eleven_days, "2주 전");
 
-    let seventeen_days = from_duration(17 * DAY_SECONDS, Locale::En, Direction::Past).expect("valid duration");
+    let seventeen_days =
+        from_duration(17 * DAY_SECONDS, Locale::En, Direction::Past).expect("valid duration");
     assert_eq!(seventeen_days, "2 weeks ago");
 
-    let eighteen_days = from_duration(18 * DAY_SECONDS, Locale::En, Direction::Past).expect("valid duration");
+    let eighteen_days =
+        from_duration(18 * DAY_SECONDS, Locale::En, Direction::Past).expect("valid duration");
     assert_eq!(eighteen_days, "3 weeks ago");
 }
 
@@ -137,29 +141,48 @@ fn rounds_up_years_from_ten_months() {
     const DAY_SECONDS: i64 = 24 * 60 * 60;
     let ten_months = 10 * MONTH_SECONDS;
     let eleven_half_months = (11 * MONTH_SECONDS) + (15 * DAY_SECONDS);
+    let first_year_start = 350 * DAY_SECONDS;
     let sixteen_months = 16 * MONTH_SECONDS;
     let thirty_four_months = 34 * MONTH_SECONDS;
 
-    let at_ten_months = from_duration(ten_months, Locale::En, Direction::Past).expect("valid duration");
+    let at_ten_months =
+        from_duration(ten_months, Locale::En, Direction::Past).expect("valid duration");
     assert_eq!(at_ten_months, "10 months ago");
 
     let at_eleven_half_months =
         from_duration(eleven_half_months, Locale::En, Direction::Past).expect("valid duration");
-    assert_eq!(at_eleven_half_months, "a year ago");
+    assert_eq!(at_eleven_half_months, "11 months and a half ago");
 
-    let at_sixteen_months = from_duration(sixteen_months, Locale::En, Direction::Past).expect("valid duration");
+    let at_first_year_start =
+        from_duration(first_year_start, Locale::En, Direction::Past).expect("valid duration");
+    assert_eq!(at_first_year_start, "a year ago");
+
+    let before_first_year_start =
+        from_duration(first_year_start - 1, Locale::En, Direction::Past).expect("valid duration");
+    assert_eq!(before_first_year_start, "11 months and a half ago");
+
+    let at_first_year_start_ko =
+        from_duration(first_year_start, Locale::Ko, Direction::Past).expect("valid duration");
+    assert_eq!(at_first_year_start_ko, "1년 전");
+
+    let before_first_year_start_ko =
+        from_duration(first_year_start - 1, Locale::Ko, Direction::Past).expect("valid duration");
+    assert_eq!(before_first_year_start_ko, "11달 반 전");
+
+    let at_sixteen_months =
+        from_duration(sixteen_months, Locale::En, Direction::Past).expect("valid duration");
     assert_eq!(at_sixteen_months, "a year and a half ago");
 
-    let before_thirty_four = from_duration(thirty_four_months - 1, Locale::En, Direction::Past)
-        .expect("valid duration");
+    let before_thirty_four =
+        from_duration(thirty_four_months - 1, Locale::En, Direction::Past).expect("valid duration");
     assert_eq!(before_thirty_four, "2 years and a half ago");
 
-    let at_thirty_four = from_duration(thirty_four_months, Locale::En, Direction::Past)
-        .expect("valid duration");
+    let at_thirty_four =
+        from_duration(thirty_four_months, Locale::En, Direction::Past).expect("valid duration");
     assert_eq!(at_thirty_four, "3 years ago");
 
-    let at_thirty_four_ko = from_duration(thirty_four_months, Locale::Ko, Direction::Past)
-        .expect("valid duration");
+    let at_thirty_four_ko =
+        from_duration(thirty_four_months, Locale::Ko, Direction::Past).expect("valid duration");
     assert_eq!(at_thirty_four_ko, "3년 전");
 }
 
