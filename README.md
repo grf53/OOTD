@@ -31,6 +31,10 @@ This repository is implemented as a Rust-first multi-binding project.
 - Daypart labels (`dawn/morning/...`, `새벽/아침/...`) are anchored to the `end` timestamp timezone offset
 - Mixed offsets are allowed; `start` is converted to the `end` offset before daypart labeling
 - `ko` only: optionally enable native Korean numerals for `시간` and `달` units (`1 -> 한`, `2 -> 두`, ...)
+- Duration humanization uses policy buckets (not calendar-precise month/year lengths):
+  - `month` bucket basis: `30d`
+  - `year` bucket basis: `12 * 30d = 360d` (policy consistency with month buckets)
+  - first `1 year` label starts at `350d` (`350d 00:00:00` and later)
 
 ## Core Rust API
 
@@ -154,6 +158,8 @@ console.log(fromDuration(90n * 60n, false, 'ko', true)) // 한 시간 반 전
 
 ## Java (Project Panama / FFM)
 
+Requires JDK `22+` (FFM/Panama target baseline).
+
 Generate C header and optional Panama bindings:
 
 ```bash
@@ -187,6 +193,8 @@ String fromDurationObject = Ootd.fromDuration(Duration.ofMinutes(90), false, Oot
 ```
 
 ## Kotlin (JVM)
+
+Requires JDK `22+` (toolchain/jvmTarget baseline).
 
 Build/test:
 
