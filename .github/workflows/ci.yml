@@ -61,7 +61,7 @@ jobs:
           cd bindings/wasm
           npm ci
           npm run build
-          node test/parity.test.mjs
+          npm run test:parity
 
   java-binding:
     runs-on: ubuntu-latest
