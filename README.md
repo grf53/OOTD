@@ -1,257 +1,248 @@
 # Outstandingly Obvious Time Delta (OOTD)
 
-OOTD renders time deltas in human phrases that feel more intuitive than strict numeric time strings.
+[![Rust](https://img.shields.io/badge/Rust-stable-f46623?logo=rust&logoColor=white)](#rust) [![Python](https://img.shields.io/badge/Python-%3E%3D3.8-3776AB?logo=python&logoColor=white)](#python) [![TypeScript](https://img.shields.io/badge/TypeScript-Node-3178C6?logo=typescript&logoColor=white)](#typescript-node) [![WebAssembly](https://img.shields.io/badge/WebAssembly-browser-654FF0?logo=webassembly&logoColor=white)](#typescript-browser-webassembly)  
+[![Java](https://img.shields.io/badge/Java-JDK_%3E%3D22-ED8B00?logo=java&logoColor=white)](#java) [![Kotlin](https://img.shields.io/badge/Kotlin-JVM_%3E%3D22-7F52FF?logo=kotlin&logoColor=white)](#kotlin) [![Swift](https://img.shields.io/badge/Swift-%3E%3D5.9-F05138?logo=swift&logoColor=white)](#swift)
 
-This repository is implemented as a Rust-first multi-binding project.
+OOTD renders time deltas as glanceable, localized phrases for feeds, notifications, timelines, and logs.
 
-## Architecture
 
-- `crates/ootd-core`: pure Rust domain logic (`between`, `from_duration`)
-- `crates/ootd-ffi-c`: C ABI layer for low-level interop (`cbindgen`, Java/Swift FFI path)
-- `bindings/python/rust`: Python native extension crate (`PyO3`)
-- `bindings/node/rust`: Node.js native addon (`napi-rs`)
-- `bindings/wasm/rust`: Browser/WebAssembly binding (`wasm-bindgen`)
-- `bindings/python`: Python package layout and tests (`maturin` project)
-- `bindings/java`: Java FFM wrapper and Gradle project
-- `bindings/kotlin`: Kotlin/JVM wrapper over Java FFM layer
-- `bindings/node`: Node package scaffolding
-- `bindings/wasm`: wasm package scaffolding
-- `bindings/swift`: Swift package over C FFI (`dlopen`/`dlsym`)
+## Quick start
 
-## Supported Locale (v1)
+```python
+import ootd
 
-- `en`
-- `ko`
+print(ootd.between("2026-03-09T18:21:29Z", "2026-05-03T19:31:43Z"))
+# 2 months ago
 
-## Time Input Contract
+print(ootd.between(
+    "2026-03-09T18:21:29Z",
+    "2026-05-03T19:31:43Z",
+    locale="ko",
+    use_native_ko_number=True,
+))
+# 두 달 전
+```
 
-- `between` requires timezone-aware RFC3339 timestamps (`Z` or `+/-hh:mm` offsets)
-- Naive datetime values are rejected by design
-- Delta magnitude is computed on absolute instants (UTC-equivalent comparison)
-- Daypart labels (`dawn/morning/...`, `새벽/아침/...`) are anchored to the `end` timestamp timezone offset
-- Mixed offsets are allowed; `start` is converted to the `end` offset before daypart labeling
-- `ko` only: optionally enable native Korean numerals for `시간` and `달` units (`1 -> 한`, `2 -> 두`, ...)
-- Duration humanization uses policy buckets (not calendar-precise month/year lengths):
-  - `month` bucket basis: `30d`
-  - `year` bucket basis: `12 * 30d = 360d` (policy consistency with month buckets)
-  - first `1 year` label starts at `350d` (`350d 00:00:00` and later)
+Same interval, different rendering:
+| Case | Expression |
+| --- | --- |
+| Actual `datetime.timedelta` | `55 days, 1:10:14` |
+| Common site display | `1 month ago` |
+| **OOTD** | **`2 months ago`** |
 
-## Core Rust API
+You know a 55-day gap is actually two months.  
+But no site says that until the calendar-month delta rolls over to `2`.
+
+See the same idea in whatever stack you ship:
+
+- [![Rust](https://img.shields.io/badge/Rust-stable-f46623?logo=rust&logoColor=white)](#rust)
+- [![Python](https://img.shields.io/badge/Python-%3E%3D3.8-3776AB?logo=python&logoColor=white)](#python)
+- [![TypeScript](https://img.shields.io/badge/TypeScript-Node-3178C6?logo=typescript&logoColor=white)](#typescript-node)
+- [![WebAssembly](https://img.shields.io/badge/WebAssembly-browser-654FF0?logo=webassembly&logoColor=white)](#typescript-browser-webassembly)
+- [![Java](https://img.shields.io/badge/Java-JDK_%3E%3D22-ED8B00?logo=java&logoColor=white)](#java)
+- [![Kotlin](https://img.shields.io/badge/Kotlin-JVM_%3E%3D22-7F52FF?logo=kotlin&logoColor=white)](#kotlin)
+- [![Swift](https://img.shields.io/badge/Swift-%3E%3D5.9-F05138?logo=swift&logoColor=white)](#swift)
+
+## Behavior By Example
+
+OOTD gives people the phrase they understand at a glance.
+
+| Start | End | English | Korean |
+| --- | --- | --- | --- |
+| `2023-11-03` | `2026-05-03` | `2 years and a half ago` | `2년 반 전` |
+| `03-09` | `05-03` | `2 months ago` | `두 달 전` |
+| `03-24` | `05-03` | `a month and a half ago` | `한 달 반 전` |
+| `06-12` | `05-03` | `a month and a half later` | `한 달 반 후` |
+| `04-23` | `05-03` | `a week ago` | `1주 전` |
+| `05-10` | `05-03` | `a week later` | `1주 후` |
+| `05-02 13:30` | `05-03 12:00` | `yesterday afternoon` | `어제 낮` |
+| `05-04 13:30` | `05-03 20:30` | `tomorrow afternoon` | `내일 낮` |
+| `05-04 08:00` | `05-03 20:00` | `tomorrow morning` | `내일 아침` |
+| `20:30` | `23:30` | `earlier tonight` | `오늘 밤` |
+| `09:07` | `10:42` | `an hour and a half ago` | `한 시간 반 전` |
+| `10:42` | `09:07` | `an hour and a half later` | `한 시간 반 후` |
+
+## Languages
+
+### Rust
 
 ```rust
-use ootd_core::{
-    between_rfc3339, between_rfc3339_with_options, from_duration, Direction, Locale, RenderOptions,
-};
+use ootd_core::{between_rfc3339, between_rfc3339_with_options, Locale, RenderOptions};
 
 let phrase = between_rfc3339(
-    "2023-12-09T18:21:29Z",
-    "2024-01-25T13:31:43Z",
+    "2026-03-09T18:21:29Z",
+    "2026-05-03T19:31:43Z",
     Locale::En,
 )?;
-assert_eq!(phrase, "a month and a half ago");
+assert_eq!(phrase, "2 months ago");
 
-let mixed_en = between_rfc3339(
-    "2024-01-25T01:30:00+09:00",
-    "2024-01-25T13:00:00Z",
-    Locale::En,
-)?;
-assert_eq!(mixed_en, "yesterday afternoon");
-
-let mixed_ko = between_rfc3339(
-    "2024-01-25T01:30:00+09:00",
-    "2024-01-25T13:00:00Z",
-    Locale::Ko,
-)?;
-assert_eq!(mixed_ko, "어제 낮");
-
-let native_ko = between_rfc3339_with_options(
-    "2023-12-09T18:21:29Z",
-    "2024-01-25T13:31:43Z",
+let ko = between_rfc3339_with_options(
+    "2026-03-09T18:21:29Z",
+    "2026-05-03T19:31:43Z",
     Locale::Ko,
     RenderOptions {
         ko_native_numerals: true,
     },
 )?;
-assert_eq!(native_ko, "한 달 반 전");
-
-let phrase = from_duration(90 * 60, Locale::Ko, Direction::Past)?;
-assert_eq!(phrase, "1시간 반 전");
-
-let err = from_duration(-1, Locale::En, Direction::Past);
-assert!(err.is_err());
+assert_eq!(ko, "두 달 전");
 ```
 
-## Python (PyO3)
+### Python
 
-Build/install locally:
-
-```bash
-cd bindings/python
-maturin develop
-```
-
-Usage:
+The Python API accepts RFC3339 strings or timezone-aware `datetime` objects for
+`between`. Naive datetimes are rejected so the output cannot silently depend on
+the machine timezone.
 
 ```python
 import ootd
-from datetime import datetime, timezone, timedelta
 
-start = datetime.now(timezone.utc) - timedelta(days=48)
-end = datetime.now(timezone.utc)
-print(ootd.between(start, end, "en"))
-print(ootd.from_duration(90 * 60, False, "ko"))
-print(ootd.from_duration(timedelta(minutes=90), False, "ko"))  # timedelta 입력 허용
-print(ootd.from_duration(90 * 60 + 0.9, False, "ko"))  # float은 내부에서 int로 변환
-print(ootd.from_duration(90 * 60, False, "ko", True))  # 한 시간 반 전
-# raises ValueError: negative duration is not allowed: -1
-# ootd.from_duration(-1, False, "en")
+print(ootd.between(
+    "2026-03-09T18:21:29Z",
+    "2026-05-03T19:31:43Z",
+))
+# 2 months ago
+
+print(ootd.between(
+    "2026-03-09T18:21:29Z",
+    "2026-05-03T19:31:43Z",
+    locale="ko",
+    use_native_ko_number=True,
+))
+# 두 달 전
 ```
 
-Notes:
-
-- `bindings/python/rust/build.rs` auto-generates `bindings/python/ootd/__init__.pyi` during build.
-- `ootd` is a pure-Python wrapper over `ootd._native`, so monkeypatching is straightforward (`ootd.between`, `ootd._between_impl`, etc.).
-
-## TypeScript Node (napi-rs)
-
-```bash
-cd bindings/node
-npm install
-npm run build
-```
+### TypeScript Node
 
 ```ts
-import { between, fromDuration } from '@ootd/node'
-// locale type: "en" | "ko"
-// between input: RFC3339 string | Date | object with toISOString()
-// fromDuration input: number | bigint | duration-like object(total/asSeconds/toMillis)
+import { between } from '@ootd/node'
 
-console.log(between('2023-12-09T18:21:29Z', '2024-01-25T13:31:43Z', 'en'))
-console.log(between(new Date('2023-12-09T18:21:29Z'), new Date('2024-01-25T13:31:43Z'), 'en'))
-console.log(fromDuration(90 * 60, false, 'ko'))
-console.log(fromDuration({ asSeconds: () => 90 * 60 }, false, 'ko'))
-console.log(fromDuration(90 * 60, false, 'ko', true)) // 한 시간 반 전
-// throws Error: negative duration is not allowed: -1
-// fromDuration(-1, false, 'en')
+console.log(between('2026-03-09T18:21:29Z', '2026-05-03T19:31:43Z', 'en'))
+// 2 months ago
+
+console.log(between('2026-03-09T18:21:29Z', '2026-05-03T19:31:43Z', 'ko', true))
+// 두 달 전
 ```
 
-Note: `Date` inputs are normalized via `toISOString()` (UTC `Z`). If you need a specific offset anchor for daypart labeling, pass explicit RFC3339 strings with that offset.
-
-## TypeScript Browser (wasm-bindgen)
-
-```bash
-cd bindings/wasm
-npm install
-npm run build
-```
+### TypeScript Browser WebAssembly
 
 ```ts
-import { between, fromDuration } from '@ootd/wasm/pkg/ootd_wasm'
-// locale type: "en" | "ko" (generated d.ts is patched after wasm build)
+import { between } from '@ootd/wasm/pkg/ootd_wasm'
 
-console.log(between('2023-12-09T18:21:29Z', '2024-01-25T13:31:43Z', 'en'))
-console.log(fromDuration(90n * 60n, false, 'ko'))
-console.log(fromDuration(90n * 60n, false, 'ko', true)) // 한 시간 반 전
-// throws Error: negative duration is not allowed: -1
-// fromDuration(-1n, false, 'en')
+console.log(between('2026-03-09T18:21:29Z', '2026-05-03T19:31:43Z', 'en'))
+// 2 months ago
+
+console.log(between('2026-03-09T18:21:29Z', '2026-05-03T19:31:43Z', 'ko', true))
+// 두 달 전
 ```
 
-## Java (Project Panama / FFM)
-
-Requires JDK `22+` (FFM/Panama target baseline).
-
-Generate C header and optional Panama bindings:
-
-```bash
-./scripts/gen-c-header.sh
-./scripts/gen-java-bindings.sh
-```
-
-Build Java wrapper:
-
-```bash
-cd bindings/java
-gradle test --no-daemon
-```
-
-Usage:
+### Java
 
 ```java
-import java.time.Duration;
-import java.time.OffsetDateTime;
+import io.ootd.Ootd;
+import io.ootd.OotdLocale;
 
-String phrase = Ootd.between("2023-12-09T18:21:29Z", "2024-01-25T13:31:43Z", OotdLocale.EN);
-String phraseFromDateTime = Ootd.between(
-        OffsetDateTime.parse("2023-12-09T18:21:29Z"),
-        OffsetDateTime.parse("2024-01-25T13:31:43Z"),
+String phrase = Ootd.between(
+        "2026-03-09T18:21:29Z",
+        "2026-05-03T19:31:43Z",
         OotdLocale.EN
 );
-String nativeKo = Ootd.between("2023-12-09T18:21:29Z", "2024-01-25T13:31:43Z", OotdLocale.KO, true);
-String fromDurationObject = Ootd.fromDuration(Duration.ofMinutes(90), false, OotdLocale.EN);
-// throws IllegalArgumentException for negative duration
-// Ootd.fromDuration(-1, false, OotdLocale.EN);
+// 2 months ago
+
+String ko = Ootd.between(
+        "2026-03-09T18:21:29Z",
+        "2026-05-03T19:31:43Z",
+        OotdLocale.KO,
+        true
+);
+// 두 달 전
 ```
 
-## Kotlin (JVM)
-
-Requires JDK `22+` (toolchain/jvmTarget baseline).
-
-Build/test:
-
-```bash
-cd bindings/kotlin
-gradle test --no-daemon
-```
-
-Usage:
+### Kotlin
 
 ```kotlin
 import io.ootd.OotdLocale
 import io.ootd.kotlin.OotdKotlin
-import java.time.Duration
 
-println(OotdKotlin.between("2023-12-09T18:21:29Z", "2024-01-25T13:31:43Z", OotdLocale.EN))
-println(OotdKotlin.fromDuration(Duration.ofMinutes(90), false, OotdLocale.KO, true))
+println(OotdKotlin.between("2026-03-09T18:21:29Z", "2026-05-03T19:31:43Z", OotdLocale.EN))
+// 2 months ago
+
+println(OotdKotlin.between("2026-03-09T18:21:29Z", "2026-05-03T19:31:43Z", OotdLocale.KO, true))
+// 두 달 전
 ```
 
-## Swift
-
-Build native library first:
-
-```bash
-cargo build -p ootd-ffi-c
-cd bindings/swift
-swift run ootd-parity
-```
-
-Usage:
+### Swift
 
 ```swift
 import OOTD
 
 let phrase = try OOTD.between(
-    startRFC3339: "2023-12-09T18:21:29Z",
-    endRFC3339: "2024-01-25T13:31:43Z",
+    startRFC3339: "2026-03-09T18:21:29Z",
+    endRFC3339: "2026-05-03T19:31:43Z",
     locale: .en
 )
+// 2 months ago
 
-let ko = try OOTD.fromDuration(
-    seconds: 90 * 60,
-    isFuture: false,
+let ko = try OOTD.between(
+    startRFC3339: "2026-03-09T18:21:29Z",
+    endRFC3339: "2026-05-03T19:31:43Z",
     locale: .ko,
     useNativeKoNumber: true
 )
+// 두 달 전
 ```
+
+## API Shape
+
+Core operations are the same across bindings:
+
+| Operation | Use when | Direction |
+| --- | --- | --- |
+| `between(start, end, locale, options)` | You have two timestamp instants. | `end - start` decides past/future. |
+| `from_duration(seconds, is_future, locale, options)` | You already have an elapsed duration. | `is_future=False` renders past, `True` renders future. |
+
+Supported locales:
+
+- `en`
+- `ko`
+
+Korean native counters can be enabled for `시간` and `달` units:
+
+```python
+ootd.from_duration(90 * 60, False, "ko", True)
+# 한 시간 반 전
+```
+
+## Bindings
+
+This is a Rust-first multi-binding repository.
+
+| Binding | Location | Build or test |
+| --- | --- | --- |
+| Rust core | `crates/ootd-core` | `cargo test -p ootd-core` |
+| C FFI | `crates/ootd-ffi-c` | `cargo build -p ootd-ffi-c` |
+| Python | `bindings/python` | `maturin develop && pytest tests` |
+| Node | `bindings/node` | `npm ci && npm run build && node test/parity.test.mjs` |
+| WebAssembly | `bindings/wasm` | `npm ci && npm run build && npm run test:parity` |
+| Java | `bindings/java` | `gradle test --no-daemon` |
+| Kotlin | `bindings/kotlin` | `gradle test --no-daemon` |
+| Swift | `bindings/swift` | `swift run ootd-parity` |
+
+## Input Contract
+
+- `between` requires RFC3339 timestamps or timezone-aware datetime objects.
+- Naive datetime values are rejected by design.
+- Mixed offsets are allowed.
+- Delta magnitude is computed by comparing absolute instants.
+- Daypart labels are based on the `start` time converted to the `end` timezone
+  offset.
+- `from_duration` accepts non-negative durations.
 
 ## Tooling
 
-- C header generation: `cbindgen` (`cbindgen.toml`)
-- Java binding generation: `jextract` (from generated `include/ootd.h`)
-- Shared parity fixtures: `tests/parity_cases.json` (`between_cases`, `duration_cases`)
-
-## CI
-
-GitHub Actions runs Rust checks/tests and validates multi-binding build commands.
+- C header generation: `cbindgen` with `cbindgen.toml`
+- Java binding generation: `jextract` from `include/ootd.h`
+- Shared parity fixtures: `tests/parity_cases.json`
+- CI: GitHub Actions validates Rust and all maintained bindings
 
 ## License
 
