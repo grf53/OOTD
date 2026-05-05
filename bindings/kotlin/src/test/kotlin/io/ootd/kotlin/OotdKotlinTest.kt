@@ -1,7 +1,8 @@
 package io.ootd.kotlin
 
-import io.ootd.OotdLocale
+import io.ootd.Locale
 import java.time.Duration
+import java.time.OffsetDateTime
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -9,20 +10,20 @@ import kotlin.test.assertFailsWith
 class OotdKotlinTest {
     @Test
     fun rendersKnownPhrase() {
-        val out = OotdKotlin.between(
+        val out = Ootd.between(
             "2023-12-09T18:21:29Z",
             "2024-01-25T13:31:43Z",
-            OotdLocale.EN,
+            Locale.EN,
         )
         assertEquals("a month and a half ago", out)
     }
 
     @Test
     fun rendersNativeKoreanNumberWhenEnabled() {
-        val out = OotdKotlin.between(
+        val out = Ootd.between(
             "2023-12-09T18:21:29Z",
             "2024-01-25T13:31:43Z",
-            OotdLocale.KO,
+            Locale.KO,
             true,
         )
         assertEquals("한 달 반 전", out)
@@ -30,14 +31,29 @@ class OotdKotlinTest {
 
     @Test
     fun acceptsDurationInput() {
-        val out = OotdKotlin.fromDuration(Duration.ofMinutes(90), false, OotdLocale.EN)
+        val out = Ootd.fromDuration(Duration.ofMinutes(90), false, Locale.EN)
         assertEquals("an hour and a half ago", out)
     }
 
     @Test
     fun rejectsNegativeDuration() {
         assertFailsWith<IllegalArgumentException> {
-            OotdKotlin.fromDuration(-1, false, OotdLocale.EN)
+            Ootd.fromDuration(-1, false, Locale.EN)
         }
+    }
+
+    @Test
+    fun supportsRangeOf() {
+        val range = Ootd.rangeOf("두 달 전", Locale.KO)
+        assertEquals(Duration.ofSeconds(-6_047_999L), range.start())
+        assertEquals(Duration.ofSeconds(-4_752_000L), range.end())
+    }
+
+    @Test
+    fun supportsDurationRangeResolveAt() {
+        val range = Ootd.rangeOf("두 달 전", Locale.KO)
+        val resolved = range.resolveAt("2026-04-29T12:00:00+09:00")
+        assertEquals(OffsetDateTime.parse("2026-02-18T12:00:01+09:00"), resolved.start())
+        assertEquals(OffsetDateTime.parse("2026-03-05T12:00:00+09:00"), resolved.end())
     }
 }

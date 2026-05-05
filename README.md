@@ -126,7 +126,7 @@ console.log(between('2026-03-09T18:21:29Z', '2026-05-03T19:31:43Z', 'ko', true))
 ### TypeScript Browser WebAssembly
 
 ```ts
-import { between } from '@ootd/wasm/pkg/ootd_wasm'
+import { between } from '@ootd/wasm'
 
 console.log(between('2026-03-09T18:21:29Z', '2026-05-03T19:31:43Z', 'en'))
 // 2 months ago
@@ -139,19 +139,19 @@ console.log(between('2026-03-09T18:21:29Z', '2026-05-03T19:31:43Z', 'ko', true))
 
 ```java
 import io.ootd.Ootd;
-import io.ootd.OotdLocale;
+import io.ootd.Locale;
 
 String phrase = Ootd.between(
         "2026-03-09T18:21:29Z",
         "2026-05-03T19:31:43Z",
-        OotdLocale.EN
+        Locale.EN
 );
 // 2 months ago
 
 String ko = Ootd.between(
         "2026-03-09T18:21:29Z",
         "2026-05-03T19:31:43Z",
-        OotdLocale.KO,
+        Locale.KO,
         true
 );
 // 두 달 전
@@ -160,13 +160,13 @@ String ko = Ootd.between(
 ### Kotlin
 
 ```kotlin
-import io.ootd.OotdLocale
-import io.ootd.kotlin.OotdKotlin
+import io.ootd.Locale
+import io.ootd.kotlin.Ootd
 
-println(OotdKotlin.between("2026-03-09T18:21:29Z", "2026-05-03T19:31:43Z", OotdLocale.EN))
+println(Ootd.between("2026-03-09T18:21:29Z", "2026-05-03T19:31:43Z", Locale.EN))
 // 2 months ago
 
-println(OotdKotlin.between("2026-03-09T18:21:29Z", "2026-05-03T19:31:43Z", OotdLocale.KO, true))
+println(Ootd.between("2026-03-09T18:21:29Z", "2026-05-03T19:31:43Z", Locale.KO, true))
 // 두 달 전
 ```
 

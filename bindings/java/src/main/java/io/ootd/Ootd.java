@@ -35,10 +35,41 @@ public final class Ootd {
             FunctionDescriptor.of(ADDRESS, JAVA_LONG, JAVA_BOOLEAN, ADDRESS, JAVA_BOOLEAN)
     );
 
+    private static final MethodHandle RANGE_OF = downcall(
+            "ootd_range_of",
+            FunctionDescriptor.of(JAVA_BOOLEAN, ADDRESS, ADDRESS, ADDRESS, ADDRESS)
+    );
+
+    private static final MethodHandle RESOLVE_DURATION_RANGE_AT_RFC3339 = downcall(
+            "ootd_duration_range_resolve_at_rfc3339",
+            FunctionDescriptor.of(JAVA_BOOLEAN, JAVA_LONG, JAVA_LONG, ADDRESS, ADDRESS, ADDRESS)
+    );
+
     private static final MethodHandle FREE = downcall(
             "ootd_free_string",
             FunctionDescriptor.ofVoid(ADDRESS)
     );
+
+    public record DurationRange(Duration start, Duration end) {
+        public TimestampRange resolveAt(String anchorRfc3339) {
+            return Ootd.resolveDurationRangeAtRfc3339(this, anchorRfc3339);
+        }
+
+        public TimestampRange resolveAt(OffsetDateTime anchor) {
+            Objects.requireNonNull(anchor, "anchor must not be null");
+            return resolveAt(toRfc3339(anchor));
+        }
+
+        public TimestampRange resolveAt(ZonedDateTime anchor) {
+            Objects.requireNonNull(anchor, "anchor must not be null");
+            return resolveAt(toRfc3339(anchor));
+        }
+    }
+
+    public record TimestampRange(
+            OffsetDateTime start,
+            OffsetDateTime end
+    ) {}
 
     private Ootd() {}
 
@@ -101,19 +132,19 @@ public final class Ootd {
         return "libootd_ffi_c.so";
     }
 
-    public static String between(OffsetDateTime start, OffsetDateTime end, OotdLocale locale) {
+    public static String between(OffsetDateTime start, OffsetDateTime end, Locale locale) {
         return between(start, end, locale, false);
     }
 
     public static String between(
             OffsetDateTime start,
             OffsetDateTime end,
-            OotdLocale locale,
+            Locale locale,
             boolean useNativeKoNumber
     ) {
         Objects.requireNonNull(start, "start must not be null");
         Objects.requireNonNull(end, "end must not be null");
-        OotdLocale safeLocale = locale == null ? OotdLocale.EN : locale;
+        Locale safeLocale = locale == null ? Locale.EN : locale;
         return between(
                 toRfc3339(start),
                 toRfc3339(end),
@@ -122,19 +153,19 @@ public final class Ootd {
         );
     }
 
-    public static String between(ZonedDateTime start, ZonedDateTime end, OotdLocale locale) {
+    public static String between(ZonedDateTime start, ZonedDateTime end, Locale locale) {
         return between(start, end, locale, false);
     }
 
     public static String between(
             ZonedDateTime start,
             ZonedDateTime end,
-            OotdLocale locale,
+            Locale locale,
             boolean useNativeKoNumber
     ) {
         Objects.requireNonNull(start, "start must not be null");
         Objects.requireNonNull(end, "end must not be null");
-        OotdLocale safeLocale = locale == null ? OotdLocale.EN : locale;
+        Locale safeLocale = locale == null ? Locale.EN : locale;
         return between(
                 toRfc3339(start),
                 toRfc3339(end),
@@ -143,17 +174,17 @@ public final class Ootd {
         );
     }
 
-    public static String between(String startRfc3339, String endRfc3339, OotdLocale locale) {
+    public static String between(String startRfc3339, String endRfc3339, Locale locale) {
         return between(startRfc3339, endRfc3339, locale, false);
     }
 
     public static String between(
             String startRfc3339,
             String endRfc3339,
-            OotdLocale locale,
+            Locale locale,
             boolean useNativeKoNumber
     ) {
-        OotdLocale safeLocale = locale == null ? OotdLocale.EN : locale;
+        Locale safeLocale = locale == null ? Locale.EN : locale;
         return between(startRfc3339, endRfc3339, safeLocale.code(), useNativeKoNumber);
     }
 
@@ -187,32 +218,32 @@ public final class Ootd {
         return fromDuration(seconds, isFuture, locale, false);
     }
 
-    public static String fromDuration(Duration duration, boolean isFuture, OotdLocale locale) {
+    public static String fromDuration(Duration duration, boolean isFuture, Locale locale) {
         return fromDuration(duration, isFuture, locale, false);
     }
 
     public static String fromDuration(
             Duration duration,
             boolean isFuture,
-            OotdLocale locale,
+            Locale locale,
             boolean useNativeKoNumber
     ) {
         Objects.requireNonNull(duration, "duration must not be null");
-        OotdLocale safeLocale = locale == null ? OotdLocale.EN : locale;
+        Locale safeLocale = locale == null ? Locale.EN : locale;
         return fromDuration(duration.getSeconds(), isFuture, safeLocale.code(), useNativeKoNumber);
     }
 
-    public static String fromDuration(long seconds, boolean isFuture, OotdLocale locale) {
+    public static String fromDuration(long seconds, boolean isFuture, Locale locale) {
         return fromDuration(seconds, isFuture, locale, false);
     }
 
     public static String fromDuration(
             long seconds,
             boolean isFuture,
-            OotdLocale locale,
+            Locale locale,
             boolean useNativeKoNumber
     ) {
-        OotdLocale safeLocale = locale == null ? OotdLocale.EN : locale;
+        Locale safeLocale = locale == null ? Locale.EN : locale;
         return fromDuration(seconds, isFuture, safeLocale.code(), useNativeKoNumber);
     }
 
@@ -233,6 +264,83 @@ public final class Ootd {
             return consumeNativeString(raw);
         } catch (Throwable t) {
             throw new IllegalArgumentException("Failed to render OOTD duration", t);
+        }
+    }
+
+    public static DurationRange rangeOf(String expression, Locale locale) {
+        Locale safeLocale = locale == null ? Locale.EN : locale;
+        return rangeOf(expression, safeLocale.code());
+    }
+
+    public static DurationRange rangeOf(String expression, String locale) {
+        Objects.requireNonNull(expression, "expression must not be null");
+        String safeLocale = locale == null ? "en" : locale;
+
+        try (Arena arena = Arena.ofConfined()) {
+            MemorySegment expressionPtr = arena.allocateFrom(expression);
+            MemorySegment localePtr = arena.allocateFrom(safeLocale);
+            MemorySegment outStart = arena.allocate(JAVA_LONG);
+            MemorySegment outEnd = arena.allocate(JAVA_LONG);
+
+            boolean ok = (boolean) RANGE_OF.invoke(
+                    expressionPtr,
+                    localePtr,
+                    outStart,
+                    outEnd
+            );
+            if (!ok) {
+                throw new IllegalArgumentException("Failed to parse OOTD expression");
+            }
+
+            long startSeconds = outStart.get(JAVA_LONG, 0);
+            long endSeconds = outEnd.get(JAVA_LONG, 0);
+            return new DurationRange(
+                    Duration.ofSeconds(startSeconds),
+                    Duration.ofSeconds(endSeconds)
+            );
+        } catch (IllegalArgumentException e) {
+            throw e;
+        } catch (Throwable t) {
+            throw new IllegalArgumentException("Failed to parse OOTD expression", t);
+        }
+    }
+
+    private static TimestampRange resolveDurationRangeAtRfc3339(
+            DurationRange range,
+            String anchorRfc3339
+    ) {
+        Objects.requireNonNull(range, "range must not be null");
+        Objects.requireNonNull(anchorRfc3339, "anchorRfc3339 must not be null");
+
+        try (Arena arena = Arena.ofConfined()) {
+            MemorySegment anchorPtr = arena.allocateFrom(anchorRfc3339);
+            MemorySegment outStartRfc3339Ptr = arena.allocate(ADDRESS);
+            MemorySegment outEndRfc3339Ptr = arena.allocate(ADDRESS);
+
+            boolean ok = (boolean) RESOLVE_DURATION_RANGE_AT_RFC3339.invoke(
+                    range.start().getSeconds(),
+                    range.end().getSeconds(),
+                    anchorPtr,
+                    outStartRfc3339Ptr,
+                    outEndRfc3339Ptr
+            );
+            if (!ok) {
+                throw new IllegalArgumentException("Failed to resolve OOTD duration range");
+            }
+
+            MemorySegment rawStart = outStartRfc3339Ptr.get(ADDRESS, 0);
+            MemorySegment rawEnd = outEndRfc3339Ptr.get(ADDRESS, 0);
+            String startRfc3339 = consumeNativeString(rawStart);
+            String endRfc3339 = consumeNativeString(rawEnd);
+
+            return new TimestampRange(
+                    OffsetDateTime.parse(startRfc3339),
+                    OffsetDateTime.parse(endRfc3339)
+            );
+        } catch (IllegalArgumentException e) {
+            throw e;
+        } catch (Throwable t) {
+            throw new IllegalArgumentException("Failed to resolve OOTD duration range", t);
         }
     }
 

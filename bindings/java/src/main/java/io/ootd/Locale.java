@@ -1,12 +1,12 @@
 package io.ootd;
 
-public enum OotdLocale {
+public enum Locale {
     EN("en"),
     KO("ko");
 
     private final String code;
 
-    OotdLocale(String code) {
+    Locale(String code) {
         this.code = code;
     }
 

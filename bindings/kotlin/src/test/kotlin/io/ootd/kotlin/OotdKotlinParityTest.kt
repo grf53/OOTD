@@ -1,9 +1,11 @@
 package io.ootd.kotlin
 
-import io.ootd.OotdLocale
+import io.ootd.Locale
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.Path
+import java.time.Duration
+import java.time.OffsetDateTime
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -15,10 +17,10 @@ class OotdKotlinParityTest {
         val fixture = ParityFixture.load()
         fixture.betweenCases.forEach { c ->
             val locale = when (c.locale) {
-                "ko" -> OotdLocale.KO
-                else -> OotdLocale.EN
+                "ko" -> Locale.KO
+                else -> Locale.EN
             }
-            val out = OotdKotlin.between(c.start, c.end, locale, c.useNativeKoNumber)
+            val out = Ootd.between(c.start, c.end, locale, c.useNativeKoNumber)
             assertEquals(c.expected, out, "between parity mismatch: ${c.name}")
         }
     }
@@ -28,13 +30,13 @@ class OotdKotlinParityTest {
         val fixture = ParityFixture.load()
         fixture.durationCases.forEach { c ->
             val locale = when (c.locale) {
-                "ko" -> OotdLocale.KO
-                else -> OotdLocale.EN
+                "ko" -> Locale.KO
+                else -> Locale.EN
             }
 
             if (c.expectedError != null) {
                 val e = assertFailsWith<IllegalArgumentException>("duration error case must fail: ${c.name}") {
-                    OotdKotlin.fromDuration(c.seconds, c.isFuture, locale, c.useNativeKoNumber)
+                    Ootd.fromDuration(c.seconds, c.isFuture, locale, c.useNativeKoNumber)
                 }
                 assertTrue(
                     e.message?.contains(c.expectedError) == true,
@@ -43,9 +45,20 @@ class OotdKotlinParityTest {
                 return@forEach
             }
 
-            val out = OotdKotlin.fromDuration(c.seconds, c.isFuture, locale, c.useNativeKoNumber)
+            val out = Ootd.fromDuration(c.seconds, c.isFuture, locale, c.useNativeKoNumber)
             assertEquals(c.expected, out, "duration parity mismatch: ${c.name}")
         }
+    }
+
+    @Test
+    fun parityRangeCases() {
+        val range = Ootd.rangeOf("두 달 전", Locale.KO)
+        assertEquals(Duration.ofSeconds(-6_047_999L), range.start(), "range start mismatch")
+        assertEquals(Duration.ofSeconds(-4_752_000L), range.end(), "range end mismatch")
+
+        val resolved = range.resolveAt("2026-04-29T12:00:00+09:00")
+        assertEquals(OffsetDateTime.parse("2026-02-18T12:00:01+09:00"), resolved.start(), "resolved start mismatch")
+        assertEquals(OffsetDateTime.parse("2026-03-05T12:00:00+09:00"), resolved.end(), "resolved end mismatch")
     }
 }
 
