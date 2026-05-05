@@ -1,5 +1,7 @@
+use js_sys::{Object, Reflect};
 use ootd_core::{
-    between_rfc3339_with_options, from_duration_with_options, Direction, Locale, RenderOptions,
+    between_rfc3339_with_options, from_duration_with_options, range_of, range_of_at_rfc3339,
+    Direction, DurationRange as CoreDurationRange, Locale, RenderOptions,
 };
 use std::str::FromStr;
 use wasm_bindgen::prelude::*;
@@ -41,4 +43,113 @@ pub fn from_duration_wasm(
 
     from_duration_with_options(seconds, locale, direction, options)
         .map_err(|e| JsValue::from_str(&e.to_string()))
+}
+
+#[wasm_bindgen(js_name = rangeOf)]
+pub fn range_of_wasm(expression: &str, locale: Option<String>) -> Result<JsValue, JsValue> {
+    let locale = locale.unwrap_or_else(|| "en".to_string());
+    let locale = Locale::from_str(&locale).map_err(|e| JsValue::from_str(&e.to_string()))?;
+    let range = range_of(expression, locale).map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+    let out = Object::new();
+    Reflect::set(
+        &out,
+        &JsValue::from_str("start"),
+        &JsValue::from_f64(range.start_seconds as f64),
+    )
+    .map_err(|e| JsValue::from(e))?;
+    Reflect::set(
+        &out,
+        &JsValue::from_str("end"),
+        &JsValue::from_f64(range.end_seconds as f64),
+    )
+    .map_err(|e| JsValue::from(e))?;
+
+    Ok(out.into())
+}
+
+#[wasm_bindgen(js_name = resolveDurationRange)]
+pub fn resolve_duration_range_wasm(
+    start: f64,
+    end: f64,
+    anchor_rfc3339: Option<String>,
+) -> Result<JsValue, JsValue> {
+    let start_seconds = coerce_js_seconds(start)?;
+    let end_seconds = coerce_js_seconds(end)?;
+    let range = CoreDurationRange {
+        start_seconds,
+        end_seconds,
+    };
+    let resolved = match anchor_rfc3339 {
+        Some(anchor) => range.resolve_at_rfc3339(&anchor),
+        None => range.resolve_now(),
+    }
+    .map_err(|e| JsValue::from_str(&e.to_string()))?;
+
+    let out = Object::new();
+    Reflect::set(
+        &out,
+        &JsValue::from_str("start"),
+        &JsValue::from_str(&resolved.start.to_rfc3339()),
+    )?;
+    Reflect::set(
+        &out,
+        &JsValue::from_str("end"),
+        &JsValue::from_str(&resolved.end.to_rfc3339()),
+    )?;
+
+    Ok(out.into())
+}
+
+#[wasm_bindgen(js_name = rangeOfTimestamps)]
+pub fn range_of_timestamps_wasm(
+    expression: &str,
+    locale: Option<String>,
+    anchor_rfc3339: Option<String>,
+) -> Result<JsValue, JsValue> {
+    let locale = locale.unwrap_or_else(|| "en".to_string());
+    let locale = Locale::from_str(&locale).map_err(|e| JsValue::from_str(&e.to_string()))?;
+    let resolved = match anchor_rfc3339 {
+        Some(anchor) => {
+            let range = range_of_at_rfc3339(expression, locale, &anchor)
+                .map_err(|e| JsValue::from_str(&e.to_string()))?;
+            range
+                .resolve_at_rfc3339(&anchor)
+                .map_err(|e| JsValue::from_str(&e.to_string()))?
+        }
+        None => {
+            let range =
+                range_of(expression, locale).map_err(|e| JsValue::from_str(&e.to_string()))?;
+            range
+                .resolve_now()
+                .map_err(|e| JsValue::from_str(&e.to_string()))?
+        }
+    };
+
+    let out = Object::new();
+    Reflect::set(
+        &out,
+        &JsValue::from_str("start"),
+        &JsValue::from_str(&resolved.start.to_rfc3339()),
+    )?;
+    Reflect::set(
+        &out,
+        &JsValue::from_str("end"),
+        &JsValue::from_str(&resolved.end.to_rfc3339()),
+    )?;
+
+    Ok(out.into())
+}
+
+fn coerce_js_seconds(value: f64) -> Result<i64, JsValue> {
+    if !value.is_finite() {
+        return Err(JsValue::from_str("seconds must be a finite number"));
+    }
+
+    let truncated = value.trunc();
+    if truncated < i64::MIN as f64 || truncated > i64::MAX as f64 {
+        return Err(JsValue::from_str("seconds is out of range for i64"));
+    }
+
+    Ok(truncated as i64)
 }

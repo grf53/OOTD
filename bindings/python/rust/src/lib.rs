@@ -1,9 +1,10 @@
 use ootd_core::{
-    between_rfc3339_with_options, from_duration_with_options, Direction, Locale, RenderOptions,
+    between_rfc3339_with_options, from_duration_with_options, range_of, range_of_at_rfc3339,
+    Direction, DurationRange as CoreDurationRange, Locale, RenderOptions,
 };
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
-use pyo3::types::PyAny;
+use pyo3::types::{PyAny, PyDict};
 use std::str::FromStr;
 
 #[pyfunction]
@@ -46,6 +47,74 @@ fn from_duration_py(
 
     from_duration_with_options(seconds, locale, direction, options)
         .map_err(|e| PyValueError::new_err(e.to_string()))
+}
+
+#[pyfunction(name = "range_of")]
+#[pyo3(signature = (expression, locale="en"))]
+fn range_of_py(py: Python<'_>, expression: &str, locale: &str) -> PyResult<PyObject> {
+    let locale = Locale::from_str(locale).map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let range = range_of(expression, locale).map_err(|e| PyValueError::new_err(e.to_string()))?;
+
+    let out = PyDict::new_bound(py);
+    out.set_item("start", range.start_seconds)?;
+    out.set_item("end", range.end_seconds)?;
+    Ok(out.into_py(py))
+}
+
+#[pyfunction(name = "resolve_duration_range")]
+#[pyo3(signature = (start, end, anchor_rfc3339=None))]
+fn resolve_duration_range_py(
+    py: Python<'_>,
+    start: i64,
+    end: i64,
+    anchor_rfc3339: Option<String>,
+) -> PyResult<PyObject> {
+    let range = CoreDurationRange {
+        start_seconds: start,
+        end_seconds: end,
+    };
+    let resolved = match anchor_rfc3339 {
+        Some(anchor) => range.resolve_at_rfc3339(&anchor),
+        None => range.resolve_now(),
+    }
+    .map_err(|e| PyValueError::new_err(e.to_string()))?;
+
+    let out = PyDict::new_bound(py);
+    out.set_item("start", resolved.start.to_rfc3339())?;
+    out.set_item("end", resolved.end.to_rfc3339())?;
+    Ok(out.into_py(py))
+}
+
+#[pyfunction(name = "range_of_timestamps")]
+#[pyo3(signature = (expression, locale="en", anchor_rfc3339=None))]
+fn range_of_timestamps_py(
+    py: Python<'_>,
+    expression: &str,
+    locale: &str,
+    anchor_rfc3339: Option<String>,
+) -> PyResult<PyObject> {
+    let locale = Locale::from_str(locale).map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let resolved = match anchor_rfc3339 {
+        Some(anchor) => {
+            let range = range_of_at_rfc3339(expression, locale, &anchor)
+                .map_err(|e| PyValueError::new_err(e.to_string()))?;
+            range
+                .resolve_at_rfc3339(&anchor)
+                .map_err(|e| PyValueError::new_err(e.to_string()))?
+        }
+        None => {
+            let range =
+                range_of(expression, locale).map_err(|e| PyValueError::new_err(e.to_string()))?;
+            range
+                .resolve_now()
+                .map_err(|e| PyValueError::new_err(e.to_string()))?
+        }
+    };
+
+    let out = PyDict::new_bound(py);
+    out.set_item("start", resolved.start.to_rfc3339())?;
+    out.set_item("end", resolved.end.to_rfc3339())?;
+    Ok(out.into_py(py))
 }
 
 fn coerce_to_seconds(value: &Bound<'_, PyAny>) -> PyResult<i64> {
@@ -103,5 +172,8 @@ fn coerce_to_rfc3339(value: &Bound<'_, PyAny>) -> PyResult<String> {
 fn _native(_py: Python<'_>, module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_function(wrap_pyfunction!(between, module)?)?;
     module.add_function(wrap_pyfunction!(from_duration_py, module)?)?;
+    module.add_function(wrap_pyfunction!(range_of_py, module)?)?;
+    module.add_function(wrap_pyfunction!(resolve_duration_range_py, module)?)?;
+    module.add_function(wrap_pyfunction!(range_of_timestamps_py, module)?)?;
     Ok(())
 }

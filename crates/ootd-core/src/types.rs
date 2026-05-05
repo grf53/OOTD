@@ -1,4 +1,6 @@
+use chrono::{DateTime, Duration, FixedOffset, Utc};
 use std::str::FromStr;
+use std::time::SystemTime;
 use thiserror::Error;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -31,6 +33,57 @@ pub struct RenderOptions {
     pub ko_native_numerals: bool,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct DurationRange {
+    // Inclusive signed bounds relative to the parsing anchor instant.
+    // Example: "2달 전" => start_seconds=-69d, end_seconds=-55d.
+    pub start_seconds: i64,
+    pub end_seconds: i64,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TimestampRange {
+    pub start: DateTime<FixedOffset>,
+    pub end: DateTime<FixedOffset>,
+}
+
+impl TimestampRange {
+    pub fn to_rfc3339_pair(&self) -> (String, String) {
+        (self.start.to_rfc3339(), self.end.to_rfc3339())
+    }
+}
+
+impl DurationRange {
+    pub fn resolve_at(&self, anchor: DateTime<FixedOffset>) -> Result<TimestampRange, OotdError> {
+        if self.start_seconds > self.end_seconds {
+            return Err(OotdError::InvalidDurationRangeBounds {
+                start_seconds: self.start_seconds,
+                end_seconds: self.end_seconds,
+            });
+        }
+
+        let start = anchor
+            .checked_add_signed(Duration::seconds(self.start_seconds))
+            .ok_or(OotdError::RangeResolutionOverflow)?;
+        let end = anchor
+            .checked_add_signed(Duration::seconds(self.end_seconds))
+            .ok_or(OotdError::RangeResolutionOverflow)?;
+
+        Ok(TimestampRange { start, end })
+    }
+
+    pub fn resolve_at_rfc3339(&self, anchor_rfc3339: &str) -> Result<TimestampRange, OotdError> {
+        let anchor = DateTime::parse_from_rfc3339(anchor_rfc3339)
+            .map_err(|_| OotdError::InvalidDatetime(anchor_rfc3339.to_string()))?;
+        self.resolve_at(anchor)
+    }
+
+    pub fn resolve_now(&self) -> Result<TimestampRange, OotdError> {
+        let now: DateTime<FixedOffset> = DateTime::<Utc>::from(SystemTime::now()).fixed_offset();
+        self.resolve_at(now)
+    }
+}
+
 #[derive(Debug, Error)]
 pub enum OotdError {
     #[error("unsupported locale: {0}")]
@@ -39,6 +92,17 @@ pub enum OotdError {
     InvalidDatetime(String),
     #[error("negative duration is not allowed: {0}")]
     NegativeDuration(i64),
+    #[error("invalid time expression: {0}")]
+    InvalidExpression(String),
+    #[error(
+        "invalid duration range bounds: start_seconds ({start_seconds}) must be <= end_seconds ({end_seconds})"
+    )]
+    InvalidDurationRangeBounds {
+        start_seconds: i64,
+        end_seconds: i64,
+    },
+    #[error("duration range resolution overflow")]
+    RangeResolutionOverflow,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

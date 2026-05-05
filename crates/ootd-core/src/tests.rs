@@ -1,3 +1,4 @@
+use chrono::DateTime;
 use std::str::FromStr;
 
 use super::*;
@@ -218,4 +219,163 @@ fn supports_native_korean_numbers_for_hour_and_month_when_enabled() {
     let week = from_duration_with_options(14 * 24 * 60 * 60, Locale::Ko, Direction::Past, options)
         .expect("valid duration");
     assert_eq!(week, "2주 전");
+}
+
+#[test]
+fn range_of_supports_korean_numeric_and_native_month_labels() {
+    const DAY_SECONDS: i64 = 24 * 60 * 60;
+
+    let numeric = range_of("2달 전", Locale::Ko).expect("valid expression");
+    assert_eq!(numeric.start_seconds, -((70 * DAY_SECONDS) - 1));
+    assert_eq!(numeric.end_seconds, -(55 * DAY_SECONDS));
+
+    let native = range_of("두 달 전", Locale::Ko).expect("valid expression");
+    assert_eq!(native, numeric);
+}
+
+#[test]
+fn range_of_supports_english_half_expression() {
+    const DAY_SECONDS: i64 = 24 * 60 * 60;
+
+    let range = range_of("a month and a half ago", Locale::En).expect("valid expression");
+    assert_eq!(range.start_seconds, -((55 * DAY_SECONDS) - 1));
+    assert_eq!(range.end_seconds, -(40 * DAY_SECONDS));
+}
+
+#[test]
+fn range_of_respects_year_start_policy() {
+    const DAY_SECONDS: i64 = 24 * 60 * 60;
+
+    let before_year = range_of("11 months and a half ago", Locale::En).expect("valid expression");
+    assert_eq!(before_year.start_seconds, -((350 * DAY_SECONDS) - 1));
+    assert_eq!(before_year.end_seconds, -(340 * DAY_SECONDS));
+
+    let at_year = range_of("a year ago", Locale::En).expect("valid expression");
+    assert_eq!(at_year.start_seconds, -((480 * DAY_SECONDS) - 1));
+    assert_eq!(at_year.end_seconds, -(350 * DAY_SECONDS));
+}
+
+#[test]
+fn range_of_supports_future_direction() {
+    const DAY_SECONDS: i64 = 24 * 60 * 60;
+
+    let range = range_of("2달 후", Locale::Ko).expect("valid expression");
+    assert_eq!(range.start_seconds, 55 * DAY_SECONDS);
+    assert_eq!(range.end_seconds, (70 * DAY_SECONDS) - 1);
+}
+
+#[test]
+fn range_of_rejects_unsupported_or_invalid_expression() {
+    let impossible_half =
+        range_of("2주 반 전", Locale::Ko).expect_err("must reject unsupported half");
+    assert!(matches!(impossible_half, OotdError::InvalidExpression(_)));
+}
+
+#[test]
+fn range_of_supports_daypart_expression_with_anchor() {
+    let anchor = "2024-01-25T23:30:00+09:00";
+    let range = range_of_at_rfc3339("어제 밤", Locale::Ko, anchor)
+        .expect("daypart expression should parse");
+    let resolved = range.resolve_at_rfc3339(anchor).expect("must resolve");
+    let (start, end) = resolved.to_rfc3339_pair();
+
+    assert_eq!(start, "2024-01-24T20:00:00+09:00");
+    assert_eq!(end, "2024-01-24T23:59:59+09:00");
+}
+
+#[test]
+fn range_of_supports_english_daypart_alias_with_anchor() {
+    let anchor = "2024-01-25T23:30:00+09:00";
+    let range = range_of_at_rfc3339("earlier tonight", Locale::En, anchor)
+        .expect("daypart expression should parse");
+    let resolved = range.resolve_at_rfc3339(anchor).expect("must resolve");
+    let (start, end) = resolved.to_rfc3339_pair();
+
+    assert_eq!(start, "2024-01-25T20:00:00+09:00");
+    assert_eq!(end, "2024-01-25T23:59:59+09:00");
+}
+
+#[test]
+fn range_of_contains_original_duration_sample_roundtrip() {
+    let samples = [
+        (90_i64, Locale::En, Direction::Past),
+        (90 * 60, Locale::Ko, Direction::Past),
+        (2 * 60 * 60 + 50 * 60, Locale::En, Direction::Past),
+        (40 * 24 * 60 * 60, Locale::Ko, Direction::Past),
+        (55 * 24 * 60 * 60, Locale::Ko, Direction::Future),
+        (350 * 24 * 60 * 60, Locale::En, Direction::Past),
+    ];
+
+    for (seconds, locale, direction) in samples {
+        let expression = from_duration(seconds, locale, direction).expect("must render expression");
+        let range = range_of(&expression, locale).expect("must parse rendered expression");
+        let signed = match direction {
+            Direction::Past => -seconds,
+            Direction::Future => seconds,
+        };
+        assert!(
+            range.start_seconds <= signed && signed <= range.end_seconds,
+            "roundtrip failed: expr={expression}, signed={signed}, range=({},{})",
+            range.start_seconds,
+            range.end_seconds
+        );
+    }
+}
+
+#[test]
+fn duration_range_resolve_at_uses_given_anchor_datetime() {
+    let range = range_of("두 달 전", Locale::Ko).expect("valid expression");
+    let anchor =
+        DateTime::parse_from_rfc3339("2026-04-29T12:00:00+09:00").expect("valid anchor datetime");
+
+    let resolved = range.resolve_at(anchor).expect("must resolve");
+    let (start, end) = resolved.to_rfc3339_pair();
+
+    assert_eq!(start, "2026-02-18T12:00:01+09:00");
+    assert_eq!(end, "2026-03-05T12:00:00+09:00");
+}
+
+#[test]
+fn duration_range_resolve_at_rfc3339_matches_resolve_at() {
+    let range = range_of("두 달 전", Locale::Ko).expect("valid expression");
+    let anchor =
+        DateTime::parse_from_rfc3339("2026-04-29T12:00:00+09:00").expect("valid anchor datetime");
+
+    let from_dt = range.resolve_at(anchor).expect("must resolve");
+    let from_str = range
+        .resolve_at_rfc3339("2026-04-29T12:00:00+09:00")
+        .expect("must resolve");
+
+    assert_eq!(from_dt, from_str);
+}
+
+#[test]
+fn duration_range_rejects_invalid_bounds() {
+    let invalid = DurationRange {
+        start_seconds: 10,
+        end_seconds: 9,
+    };
+    let anchor =
+        DateTime::parse_from_rfc3339("2026-04-29T12:00:00+09:00").expect("valid anchor datetime");
+
+    let err = invalid.resolve_at(anchor).expect_err("must fail");
+    assert!(matches!(
+        err,
+        OotdError::InvalidDurationRangeBounds {
+            start_seconds: 10,
+            end_seconds: 9
+        }
+    ));
+}
+
+#[test]
+fn duration_range_resolve_now_preserves_span() {
+    let range = range_of("두 달 전", Locale::Ko).expect("valid expression");
+    let resolved = range.resolve_now().expect("must resolve now");
+    let span_seconds = resolved
+        .end
+        .signed_duration_since(resolved.start)
+        .num_seconds();
+
+    assert_eq!(span_seconds, range.end_seconds - range.start_seconds);
 }

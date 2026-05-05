@@ -1,8 +1,9 @@
 use chrono::{DateTime, Duration, FixedOffset};
 
 use crate::daypart::between_daypart;
+use crate::expression::range_of_impl;
 use crate::render::render_duration_nonnegative;
-use crate::types::{Direction, Locale, OotdError, RenderOptions};
+use crate::types::{Direction, DurationRange, Locale, OotdError, RenderOptions};
 
 pub fn between(start: DateTime<FixedOffset>, end: DateTime<FixedOffset>, locale: Locale) -> String {
     between_with_options(start, end, locale, RenderOptions::default())
@@ -72,4 +73,26 @@ pub fn from_duration_with_options(
     Ok(render_duration_nonnegative(
         seconds, locale, direction, options,
     ))
+}
+
+pub fn range_of(expression: &str, locale: Locale) -> Result<DurationRange, OotdError> {
+    range_of_impl(expression, locale, None)
+}
+
+pub fn range_of_at(
+    expression: &str,
+    locale: Locale,
+    anchor: DateTime<FixedOffset>,
+) -> Result<DurationRange, OotdError> {
+    range_of_impl(expression, locale, Some(anchor))
+}
+
+pub fn range_of_at_rfc3339(
+    expression: &str,
+    locale: Locale,
+    anchor_rfc3339: &str,
+) -> Result<DurationRange, OotdError> {
+    let anchor = DateTime::parse_from_rfc3339(anchor_rfc3339)
+        .map_err(|_| OotdError::InvalidDatetime(anchor_rfc3339.to_string()))?;
+    range_of_at(expression, locale, anchor)
 }
