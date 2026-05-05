@@ -34,6 +34,33 @@ public enum OOTDError: Error, CustomStringConvertible {
     }
 }
 
+public struct OOTDDurationRange: Equatable {
+    public let start: Duration
+    public let end: Duration
+
+    public init(start: Duration, end: Duration) {
+        self.start = start
+        self.end = end
+    }
+
+    public func resolveAt(_ anchorRFC3339: String) throws -> OOTDTimestampRange {
+        try OOTD.resolveDurationRangeAt(self, anchorRFC3339: anchorRFC3339)
+    }
+}
+
+public struct OOTDTimestampRange: Equatable {
+    public let start: Date
+    public let end: Date
+
+    public init(
+        start: Date,
+        end: Date
+    ) {
+        self.start = start
+        self.end = end
+    }
+}
+
 private typealias BetweenFn = @convention(c) (
     UnsafePointer<CChar>?,
     UnsafePointer<CChar>?,
@@ -48,16 +75,42 @@ private typealias FromDurationFn = @convention(c) (
     Bool
 ) -> UnsafeMutablePointer<CChar>?
 
+private typealias RangeOfFn = @convention(c) (
+    UnsafePointer<CChar>?,
+    UnsafePointer<CChar>?,
+    UnsafeMutablePointer<Int64>?,
+    UnsafeMutablePointer<Int64>?
+) -> Bool
+
+private typealias ResolveDurationRangeAtRfc3339Fn = @convention(c) (
+    Int64,
+    Int64,
+    UnsafePointer<CChar>?,
+    UnsafeMutablePointer<UnsafeMutablePointer<CChar>?>?,
+    UnsafeMutablePointer<UnsafeMutablePointer<CChar>?>?
+) -> Bool
+
 private typealias FreeStringFn = @convention(c) (UnsafeMutablePointer<CChar>?) -> Void
 
 private final class NativeFFI {
     let handle: UnsafeMutableRawPointer
     let between: BetweenFn
     let fromDuration: FromDurationFn
+    let rangeOf: RangeOfFn
+    let resolveDurationRangeAtRfc3339: ResolveDurationRangeAtRfc3339Fn
     let freeString: FreeStringFn
 
     init() throws {
         let paths = Self.candidateLibraryPaths()
+        typealias LoadedSymbols = (
+            handle: UnsafeMutableRawPointer,
+            between: BetweenFn,
+            fromDuration: FromDurationFn,
+            rangeOf: RangeOfFn,
+            resolveDurationRangeAtRfc3339: ResolveDurationRangeAtRfc3339Fn,
+            freeString: FreeStringFn
+        )
+        var loaded: LoadedSymbols?
 
         var lastOpenError: OOTDError?
         for path in paths where FileManager.default.fileExists(atPath: path) {
@@ -68,15 +121,52 @@ private final class NativeFFI {
             }
 
             do {
-                self.handle = handle
-                self.between = try Self.loadSymbol(handle: handle, name: "ootd_between_rfc3339_with_options")
-                self.fromDuration = try Self.loadSymbol(handle: handle, name: "ootd_from_duration_parts_with_options")
-                self.freeString = try Self.loadSymbol(handle: handle, name: "ootd_free_string")
-                return
+                let between: BetweenFn = try Self.loadSymbol(
+                    handle: handle,
+                    name: "ootd_between_rfc3339_with_options"
+                )
+                let fromDuration: FromDurationFn = try Self.loadSymbol(
+                    handle: handle,
+                    name: "ootd_from_duration_parts_with_options"
+                )
+                let rangeOf: RangeOfFn = try Self.loadSymbol(
+                    handle: handle,
+                    name: "ootd_range_of"
+                )
+                let resolveDurationRangeAtRfc3339: ResolveDurationRangeAtRfc3339Fn = try Self.loadSymbol(
+                    handle: handle,
+                    name: "ootd_duration_range_resolve_at_rfc3339"
+                )
+                let freeString: FreeStringFn = try Self.loadSymbol(handle: handle, name: "ootd_free_string")
+
+                loaded = (
+                    handle: handle,
+                    between: between,
+                    fromDuration: fromDuration,
+                    rangeOf: rangeOf,
+                    resolveDurationRangeAtRfc3339: resolveDurationRangeAtRfc3339,
+                    freeString: freeString
+                )
+                break
             } catch {
+                if let ootdError = error as? OOTDError {
+                    lastOpenError = ootdError
+                } else {
+                    lastOpenError = .nativeCallFailed(String(describing: error))
+                }
                 dlclose(handle)
-                throw error
+                continue
             }
+        }
+
+        if let loaded {
+            self.handle = loaded.handle
+            self.between = loaded.between
+            self.fromDuration = loaded.fromDuration
+            self.rangeOf = loaded.rangeOf
+            self.resolveDurationRangeAtRfc3339 = loaded.resolveDurationRangeAtRfc3339
+            self.freeString = loaded.freeString
+            return
         }
 
         if let lastOpenError {
@@ -223,5 +313,89 @@ public enum OOTD {
             locale: locale,
             useNativeKoNumber: useNativeKoNumber
         )
+    }
+
+    public static func rangeOf(
+        expression: String,
+        locale: OOTDLocale = .en
+    ) throws -> OOTDDurationRange {
+        let ffi = try ffi()
+
+        var startSeconds: Int64 = 0
+        var endSeconds: Int64 = 0
+
+        let ok = expression.withCString { expressionPtr in
+            locale.rawValue.withCString { localePtr in
+                ffi.rangeOf(expressionPtr, localePtr, &startSeconds, &endSeconds)
+            }
+        }
+
+        guard ok else {
+            throw OOTDError.nativeCallFailed("Native rangeOf call failed")
+        }
+
+        return OOTDDurationRange(
+            start: .seconds(Double(startSeconds)),
+            end: .seconds(Double(endSeconds))
+        )
+    }
+
+    fileprivate static func resolveDurationRangeAt(
+        _ range: OOTDDurationRange,
+        anchorRFC3339: String
+    ) throws -> OOTDTimestampRange {
+        let ffi = try ffi()
+        var startRaw: UnsafeMutablePointer<CChar>? = nil
+        var endRaw: UnsafeMutablePointer<CChar>? = nil
+
+        let ok = anchorRFC3339.withCString { anchorPtr in
+            ffi.resolveDurationRangeAtRfc3339(
+                range.start.components.seconds,
+                range.end.components.seconds,
+                anchorPtr,
+                &startRaw,
+                &endRaw
+            )
+        }
+
+        guard ok else {
+            throw OOTDError.nativeCallFailed("Native duration range resolve call failed")
+        }
+
+        guard let startRaw else {
+            throw OOTDError.nativeCallFailed("Native duration range resolve returned null start")
+        }
+        guard let endRaw else {
+            ffi.freeString(startRaw)
+            throw OOTDError.nativeCallFailed("Native duration range resolve returned null end")
+        }
+
+        defer {
+            ffi.freeString(startRaw)
+            ffi.freeString(endRaw)
+        }
+
+        let startText = String(cString: startRaw)
+        let endText = String(cString: endRaw)
+        guard let start = parseRFC3339(startText) else {
+            throw OOTDError.nativeCallFailed("Native duration range resolve returned invalid start RFC3339")
+        }
+        guard let end = parseRFC3339(endText) else {
+            throw OOTDError.nativeCallFailed("Native duration range resolve returned invalid end RFC3339")
+        }
+
+        return OOTDTimestampRange(start: start, end: end)
+    }
+
+    private static func parseRFC3339(_ value: String) -> Date? {
+        let basic = ISO8601DateFormatter()
+        basic.formatOptions = [.withInternetDateTime]
+        if let out = basic.date(from: value) {
+            return out
+        }
+
+        let fractional = ISO8601DateFormatter()
+        fractional.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return fractional.date(from: value)
     }
 }

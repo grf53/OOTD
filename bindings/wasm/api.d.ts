@@ -11,6 +11,7 @@ export declare class TimestampRange {
   start: Date
   end: Date
 }
+
 export declare class DurationRange {
   constructor(start: number, end: number)
   start: number

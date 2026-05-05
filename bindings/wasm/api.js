@@ -1,4 +1,10 @@
-const native = require('./index.js')
+import {
+  between as nativeBetween,
+  fromDuration as nativeFromDuration,
+  rangeOf as nativeRangeOf,
+  rangeOfTimestamps as nativeRangeOfTimestamps,
+  resolveDurationRange as nativeResolveDurationRange,
+} from './pkg/ootd_wasm.js'
 
 const MIN_SAFE_BIGINT = BigInt(Number.MIN_SAFE_INTEGER)
 const MAX_SAFE_BIGINT = BigInt(Number.MAX_SAFE_INTEGER)
@@ -54,7 +60,10 @@ function toSeconds(value) {
 
   if (value && typeof value === 'object') {
     if (typeof value.total === 'function') {
-      return toSafeIntegerSeconds(value.total({ unit: 'seconds' }), 'duration.total({ unit: "seconds" })')
+      return toSafeIntegerSeconds(
+        value.total({ unit: 'seconds' }),
+        'duration.total({ unit: "seconds" })'
+      )
     }
 
     if (typeof value.asSeconds === 'function') {
@@ -71,19 +80,6 @@ function toSeconds(value) {
   )
 }
 
-function between(startRfc3339, endRfc3339, locale = 'en', useNativeKoNumber = false) {
-  return native.between(
-    toRfc3339(startRfc3339, 'startRfc3339'),
-    toRfc3339(endRfc3339, 'endRfc3339'),
-    locale,
-    useNativeKoNumber
-  )
-}
-
-function fromDuration(seconds, isFuture = false, locale = 'en', useNativeKoNumber = false) {
-  return native.fromDuration(toSeconds(seconds), isFuture, locale, useNativeKoNumber)
-}
-
 function toTimestampRange(raw, sourceName) {
   const start = raw?.start ?? raw?.start_rfc3339 ?? raw?.startRfc3339
   const end = raw?.end ?? raw?.end_rfc3339 ?? raw?.endRfc3339
@@ -95,7 +91,25 @@ function toTimestampRange(raw, sourceName) {
   return new TimestampRange(new Date(start), new Date(end), raw)
 }
 
-class TimestampRange {
+function normalizeSpaces(value) {
+  return value.trim().replace(/\s+/g, ' ')
+}
+
+function isLikelyDaypartExpression(expression, locale) {
+  const normalized = normalizeSpaces(expression)
+  if (locale === 'ko') {
+    return /^(어제|오늘|내일) (새벽|아침|낮|저녁|밤)$/.test(normalized)
+  }
+
+  const lower = normalized.toLowerCase()
+  if (lower === 'last night' || lower === 'earlier tonight' || lower === 'tonight') {
+    return true
+  }
+
+  return /^(yesterday|this|tomorrow) (dawn|morning|afternoon|evening|night)$/.test(lower)
+}
+
+export class TimestampRange {
   constructor(start, end, raw = null) {
     if (!(start instanceof Date) || Number.isNaN(start.getTime())) {
       throw new TypeError('start must be a valid Date')
@@ -119,7 +133,7 @@ class TimestampRange {
   }
 }
 
-class DurationRange {
+export class DurationRange {
   constructor(startSeconds, endSeconds, expression = null, locale = 'en') {
     this.start = startSeconds
     this.end = endSeconds
@@ -130,11 +144,13 @@ class DurationRange {
   resolveAt(anchorRfc3339 = undefined) {
     const anchor =
       anchorRfc3339 == null ? undefined : toRfc3339(anchorRfc3339, 'anchorRfc3339')
+
     if (typeof this._expression === 'string') {
-      const raw = native.rangeOfTimestamps(this._expression, this._locale, anchor)
+      const raw = nativeRangeOfTimestamps(this._expression, this._locale, anchor)
       return toTimestampRange(raw, 'native rangeOfTimestamps')
     }
-    const raw = native.resolveDurationRange(this.start, this.end, anchor)
+
+    const raw = nativeResolveDurationRange(this.start, this.end, anchor)
     return toTimestampRange(raw, 'native resolveDurationRange')
   }
 
@@ -146,12 +162,56 @@ class DurationRange {
   }
 }
 
-function rangeOf(expression, locale = 'en') {
+export function between(
+  startRfc3339,
+  endRfc3339,
+  locale = 'en',
+  useNativeKoNumber = false
+) {
+  return nativeBetween(
+    toRfc3339(startRfc3339, 'startRfc3339'),
+    toRfc3339(endRfc3339, 'endRfc3339'),
+    locale,
+    useNativeKoNumber
+  )
+}
+
+export function fromDuration(
+  seconds,
+  isFuture = false,
+  locale = 'en',
+  useNativeKoNumber = false
+) {
+  return nativeFromDuration(BigInt(toSeconds(seconds)), isFuture, locale, useNativeKoNumber)
+}
+
+export function rangeOf(expression, locale = 'en') {
   if (typeof expression !== 'string') {
     throw new TypeError('expression must be a string')
   }
 
-  const raw = native.rangeOf(expression, locale)
+  if (isLikelyDaypartExpression(expression, locale)) {
+    // wasm environments can lack local-time facilities; use an explicit anchor path.
+    const anchor = new Date()
+    const anchorIso = anchor.toISOString()
+    const tsRange = toTimestampRange(
+      nativeRangeOfTimestamps(expression, locale, anchorIso),
+      'native rangeOfTimestamps'
+    )
+
+    const startSeconds = toSafeIntegerSeconds(
+      (tsRange.start.getTime() - anchor.getTime()) / 1000,
+      'daypart start seconds'
+    )
+    const endSeconds = toSafeIntegerSeconds(
+      (tsRange.end.getTime() - anchor.getTime()) / 1000,
+      'daypart end seconds'
+    )
+
+    return new DurationRange(startSeconds, endSeconds, expression, locale)
+  }
+
+  const raw = nativeRangeOf(expression, locale)
   const start = raw?.start ?? raw?.start_seconds ?? raw?.startSeconds
   const end = raw?.end ?? raw?.end_seconds ?? raw?.endSeconds
 
@@ -160,12 +220,4 @@ function rangeOf(expression, locale = 'en') {
   }
 
   return new DurationRange(start, end, expression, locale)
-}
-
-module.exports = {
-  between,
-  fromDuration,
-  rangeOf,
-  DurationRange,
-  TimestampRange,
 }

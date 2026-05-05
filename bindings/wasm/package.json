@@ -3,7 +3,18 @@
   "version": "0.1.0",
   "description": "Browser/WebAssembly binding for OOTD",
   "type": "module",
+  "main": "api.js",
+  "types": "api.d.ts",
+  "exports": {
+    ".": {
+      "types": "./api.d.ts",
+      "import": "./api.js"
+    },
+    "./pkg/*": "./pkg/*"
+  },
   "files": [
+    "api.js",
+    "api.d.ts",
     "pkg"
   ],
   "scripts": {

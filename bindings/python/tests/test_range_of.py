@@ -1,0 +1,27 @@
+from datetime import datetime, timedelta
+
+import ootd
+
+
+def test_range_of_duration_expression():
+    out = ootd.range_of("두 달 전", "ko")
+    assert out.to_dict() == {
+        "start": timedelta(seconds=-6_047_999),
+        "end": timedelta(seconds=-4_752_000),
+    }
+    assert out.start == timedelta(seconds=-6_047_999)
+    assert out.end == timedelta(seconds=-4_752_000)
+
+
+def test_duration_range_resolve_at_supports_daypart_anchor():
+    out = ootd.range_of("어제 밤", "ko").resolve_at("2024-01-25T23:30:00+09:00")
+    assert isinstance(out, ootd.TimestampRange)
+    assert out.start == datetime.fromisoformat("2024-01-24T20:00:00+09:00")
+    assert out.end == datetime.fromisoformat("2024-01-24T23:59:59+09:00")
+
+
+def test_duration_range_resolve_at_with_anchor():
+    out = ootd.range_of("두 달 전", "ko").resolve_at("2026-04-29T12:00:00+09:00")
+    assert isinstance(out, ootd.TimestampRange)
+    assert out.start == datetime.fromisoformat("2026-02-18T12:00:01+09:00")
+    assert out.end == datetime.fromisoformat("2026-03-05T12:00:00+09:00")

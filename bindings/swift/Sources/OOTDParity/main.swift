@@ -146,6 +146,44 @@ struct OOTDParityRunner {
             }
         }
 
+        do {
+            let range = try OOTD.rangeOf(expression: "두 달 전", locale: .ko)
+            if range.start != .seconds(Double(-6_047_999)) || range.end != .seconds(Double(-4_752_000)) {
+                failures.append("rangeOf mismatch: \(range)")
+            }
+            if range.start.components.seconds != -6_047_999 || range.end.components.seconds != -4_752_000 {
+                failures.append(
+                    "rangeOf seconds mismatch: (\(range.start.components.seconds), \(range.end.components.seconds))"
+                )
+            }
+
+            let resolved = try range.resolveAt("2026-04-29T12:00:00+09:00")
+            let formatter = ISO8601DateFormatter()
+            formatter.formatOptions = [.withInternetDateTime]
+            guard
+                let expectedStart = formatter.date(from: "2026-02-18T12:00:01+09:00"),
+                let expectedEnd = formatter.date(from: "2026-03-05T12:00:00+09:00")
+            else {
+                failures.append("failed to build expected timestamp for range resolve case")
+                return
+            }
+            if resolved.start != expectedStart || resolved.end != expectedEnd {
+                failures.append("range resolve mismatch: \(resolved)")
+            }
+            let rfcFormatter = ISO8601DateFormatter()
+            rfcFormatter.formatOptions = [.withInternetDateTime]
+            rfcFormatter.timeZone = TimeZone(secondsFromGMT: 9 * 3600)!
+            let resolvedStart = rfcFormatter.string(from: resolved.start)
+            let resolvedEnd = rfcFormatter.string(from: resolved.end)
+            if resolvedStart != "2026-02-18T12:00:01+09:00" || resolvedEnd != "2026-03-05T12:00:00+09:00" {
+                failures.append(
+                    "range resolve RFC3339 mismatch: (\(resolvedStart), \(resolvedEnd))"
+                )
+            }
+        } catch {
+            failures.append("rangeOf/resolveAt threw: \(error)")
+        }
+
         if !failures.isEmpty {
             throw RunnerError.failures(failures)
         }

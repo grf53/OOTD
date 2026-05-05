@@ -310,7 +310,10 @@ if (!nativeBinding) {
   throw new Error(`Failed to load native binding`)
 }
 
-const { between, fromDuration } = nativeBinding
+const { between, fromDuration, rangeOf, resolveDurationRange, rangeOfTimestamps } = nativeBinding
 
 module.exports.between = between
 module.exports.fromDuration = fromDuration
+module.exports.rangeOf = rangeOf
+module.exports.resolveDurationRange = resolveDurationRange
+module.exports.rangeOfTimestamps = rangeOfTimestamps

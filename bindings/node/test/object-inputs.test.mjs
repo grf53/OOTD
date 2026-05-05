@@ -1,4 +1,4 @@
-import { between, fromDuration } from '../api.js'
+import { between, fromDuration, rangeOf, TimestampRange } from '../api.js'
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 
@@ -23,6 +23,15 @@ if (!dts.includes('export type DateLike = string | Date | { toISOString(): strin
 }
 if (!dts.includes('export type DurationLike =')) {
   throw new Error('Node type declaration must expose DurationLike')
+}
+if (!dts.includes('export declare class TimestampRange')) {
+  throw new Error('Node type declaration must expose TimestampRange class')
+}
+if (!dts.includes('export declare function rangeOf(')) {
+  throw new Error('Node type declaration must expose rangeOf')
+}
+if (!dts.includes('export declare class DurationRange')) {
+  throw new Error('Node type declaration must expose DurationRange class')
 }
 
 const expectedBetween = between(start, end, 'en')
@@ -72,6 +81,33 @@ if (fromToMillis !== expectedDuration) {
   throw new Error(`fromDuration(toMillis) mismatch: ${fromToMillis} != ${expectedDuration}`)
 }
 
+const range = rangeOf('두 달 전', 'ko')
+if (range.start !== -6_047_999 || range.end !== -4_752_000) {
+  throw new Error(`rangeOf mismatch: ${JSON.stringify(range)}`)
+}
+
+const timestampRange = range.resolveAt('2026-04-29T12:00:00+09:00')
+if (!(timestampRange instanceof TimestampRange)) {
+  throw new Error('range.resolveAt must return TimestampRange class instance')
+}
+if (
+  timestampRange.start.toISOString() !== '2026-02-18T03:00:01.000Z' ||
+  timestampRange.end.toISOString() !== '2026-03-05T03:00:00.000Z'
+) {
+  throw new Error(`range.resolveAt mismatch: ${JSON.stringify(timestampRange)}`)
+}
+
+const daypartRange = rangeOf('어제 밤', 'ko').resolveAt('2024-01-25T23:30:00+09:00')
+if (!(daypartRange instanceof TimestampRange)) {
+  throw new Error('range.resolveAt(daypart) must return TimestampRange class instance')
+}
+if (
+  daypartRange.start.toISOString() !== '2024-01-24T11:00:00.000Z' ||
+  daypartRange.end.toISOString() !== '2024-01-24T14:59:59.000Z'
+) {
+  throw new Error(`range.resolveAt(daypart) mismatch: ${JSON.stringify(daypartRange)}`)
+}
+
 assertThrows(
   () => between(new Date('not-a-date'), new Date(end), 'en'),
   /valid Date/
@@ -85,4 +121,14 @@ assertThrows(
 assertThrows(
   () => fromDuration(Number.POSITIVE_INFINITY, false, 'en'),
   /finite number/
+)
+
+assertThrows(
+  () => rangeOf(123, 'ko'),
+  /expression must be a string/
+)
+
+assertThrows(
+  () => range.resolveAt(123),
+  /anchorRfc3339 must be an RFC3339 string/
 )
