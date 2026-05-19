@@ -53,12 +53,12 @@ class OotdKotlinParityTest {
     @Test
     fun parityRangeCases() {
         val range = Ootd.rangeOf("두 달 전", Locale.KO)
-        assertEquals(Duration.ofSeconds(-6_047_999L), range.start(), "range start mismatch")
-        assertEquals(Duration.ofSeconds(-4_752_000L), range.end(), "range end mismatch")
+        assertEquals(Duration.ofSeconds(-7_775_999L), range.start(), "range start mismatch")
+        assertEquals(Duration.ofSeconds(-5_184_000L), range.end(), "range end mismatch")
 
         val resolved = range.resolveAt("2026-04-29T12:00:00+09:00")
-        assertEquals(OffsetDateTime.parse("2026-02-18T12:00:01+09:00"), resolved.start(), "resolved start mismatch")
-        assertEquals(OffsetDateTime.parse("2026-03-05T12:00:00+09:00"), resolved.end(), "resolved end mismatch")
+        assertEquals(OffsetDateTime.parse("2026-01-29T12:00:01+09:00"), resolved.start(), "resolved start mismatch")
+        assertEquals(OffsetDateTime.parse("2026-02-28T12:00:00+09:00"), resolved.end(), "resolved end mismatch")
     }
 }
 

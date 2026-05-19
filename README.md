@@ -21,7 +21,7 @@ print(ootd.between("2026-03-09T18:21:29Z", "2026-05-03T19:31:43Z"))
 r = ootd.range_of("2 months ago")
 ts = r.resolve_at("2026-04-29T12:00:00Z")
 print(f"Between {ts.start} and {ts.end}.")
-# Between 2026-02-18 12:00:01Z and 2026-03-05 12:00:00Z.
+# Between 2026-01-29 12:00:01Z and 2026-02-28 12:00:00Z.
 
 # query text -> parseable expression candidates
 print(ootd.extract_expressions("지난 두 달 전 로그랑 어제 낮 결제", "ko"))
@@ -79,9 +79,9 @@ Range interpretation check (`ootd.range_of(Expression).resolve_at(Anchor)`):
 
 | Target | Anchor | Expression | Resolved range | `Target` in range? |
 | --- | --- | --- | --- | --- |
-| `2023-11-03` | `2026-05-03` | `2 years and a half ago` | `2023-07-18 ~ 2024-01-14` | Yes |
-| `03-09` | `05-03` | `2 months ago` | `02-22 00:00:01 ~ 03-09 00:00:00` | Yes |
-| `05-10` | `05-03` | `a week later` | `05-10 ~ 05-13` | Yes |
+| `2023-11-03` | `2026-05-03` | `2 years and a half ago` | `2023-05-19 ~ 2023-11-15` | Yes |
+| `02-22` | `05-03` | `2 months ago` | `02-02 00:00:01 ~ 03-04 00:00:00` | Yes |
+| `05-10` | `05-03` | `a week later` | `05-10 ~ 05-16` | Yes |
 | `01-24 16:30` | `01-25 13:00` | `yesterday afternoon` | `01-24 11:00:00 ~ 16:59:59` | Yes |
 
 ## Languages

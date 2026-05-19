@@ -44,11 +44,11 @@ class OotdParityTest {
     @Test
     void parityRangeCases() {
         Ootd.DurationRange range = Ootd.rangeOf("두 달 전", Locale.KO);
-        assertEquals(java.time.Duration.ofSeconds(-6_047_999L), range.start(), "range start mismatch");
-        assertEquals(java.time.Duration.ofSeconds(-4_752_000L), range.end(), "range end mismatch");
+        assertEquals(java.time.Duration.ofSeconds(-7_775_999L), range.start(), "range start mismatch");
+        assertEquals(java.time.Duration.ofSeconds(-5_184_000L), range.end(), "range end mismatch");
 
         Ootd.TimestampRange resolved = range.resolveAt("2026-04-29T12:00:00+09:00");
-        assertEquals(java.time.OffsetDateTime.parse("2026-02-18T12:00:01+09:00"), resolved.start(), "resolved start mismatch");
-        assertEquals(java.time.OffsetDateTime.parse("2026-03-05T12:00:00+09:00"), resolved.end(), "resolved end mismatch");
+        assertEquals(java.time.OffsetDateTime.parse("2026-01-29T12:00:01+09:00"), resolved.start(), "resolved start mismatch");
+        assertEquals(java.time.OffsetDateTime.parse("2026-02-28T12:00:00+09:00"), resolved.end(), "resolved end mismatch");
     }
 }

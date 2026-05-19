@@ -85,7 +85,7 @@ if (fromToMillis !== expectedDuration) {
 }
 
 const range = rangeOf('두 달 전', 'ko')
-if (range.start !== -6_047_999 || range.end !== -4_752_000) {
+if (range.start !== -7_775_999 || range.end !== -5_184_000) {
   throw new Error(`rangeOf mismatch: ${JSON.stringify(range)}`)
 }
 
@@ -94,8 +94,8 @@ if (!(timestampRange instanceof TimestampRange)) {
   throw new Error('range.resolveAt must return TimestampRange class instance')
 }
 if (
-  timestampRange.start.toISOString() !== '2026-02-18T03:00:01.000Z' ||
-  timestampRange.end.toISOString() !== '2026-03-05T03:00:00.000Z'
+  timestampRange.start.toISOString() !== '2026-01-29T03:00:01.000Z' ||
+  timestampRange.end.toISOString() !== '2026-02-28T03:00:00.000Z'
 ) {
   throw new Error(`range.resolveAt mismatch: ${JSON.stringify(timestampRange)}`)
 }

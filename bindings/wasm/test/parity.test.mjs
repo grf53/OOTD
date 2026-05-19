@@ -59,7 +59,7 @@ const range = rangeOf('두 달 전', 'ko')
 if (!(range instanceof DurationRange)) {
   throw new Error('rangeOf must return DurationRange class instance')
 }
-if (range.start !== -6_047_999 || range.end !== -4_752_000) {
+if (range.start !== -7_775_999 || range.end !== -5_184_000) {
   throw new Error(`rangeOf case failed: ${JSON.stringify(range)}`)
 }
 
@@ -68,8 +68,8 @@ if (!(tsRange instanceof TimestampRange)) {
   throw new Error('range.resolveAt must return TimestampRange class instance')
 }
 if (
-  tsRange.start.toISOString() !== '2026-02-18T03:00:01.000Z' ||
-  tsRange.end.toISOString() !== '2026-03-05T03:00:00.000Z'
+  tsRange.start.toISOString() !== '2026-01-29T03:00:01.000Z' ||
+  tsRange.end.toISOString() !== '2026-02-28T03:00:00.000Z'
 ) {
   throw new Error(`range.resolveAt case failed: ${JSON.stringify(tsRange)}`)
 }

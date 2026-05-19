@@ -28,6 +28,14 @@ pub(crate) fn unit_by_kind(kind: UnitKind) -> &'static Unit {
         .expect("all unit kinds must exist in UNITS")
 }
 
+// `range_of` semantics are literal/lenient: the returned range covers the
+// span that the literal unit label describes, regardless of render policy.
+//
+//   N <unit>              -> [N * bucket, (N+1) * bucket - 1]
+//   N <unit> and a half   -> [N * bucket + bucket/2, (N+1) * bucket - 1]
+//
+// Render-side policies (selection_upper_bound caps, year 350-day first-label,
+// month early-shift, round-up thresholds) intentionally do NOT apply here.
 pub(crate) fn resolve_bucket_range(
     kind: UnitKind,
     base: i64,
@@ -37,11 +45,27 @@ pub(crate) fn resolve_bucket_range(
         return None;
     }
 
-    match kind {
-        UnitKind::Year => resolve_year_bucket_range(base, has_half),
-        UnitKind::Month => resolve_month_bucket_range(base, has_half),
-        _ => resolve_standard_bucket_range(kind, base, has_half),
+    let bucket = i128::from(unit_by_kind(kind).policy.bucket_seconds);
+    if bucket < 1 {
+        return None;
     }
+
+    let base_i = i128::from(base);
+    let lower = base_i.checked_mul(bucket)?;
+    let upper = base_i.checked_add(1)?.checked_mul(bucket)?.checked_sub(1)?;
+
+    let min = if has_half {
+        let half_step = bucket / 2;
+        if half_step == 0 {
+            // No sub-bucket precision available (e.g. seconds).
+            return None;
+        }
+        lower.checked_add(half_step)?
+    } else {
+        lower
+    };
+
+    from_i128_range(min, upper)
 }
 
 fn resolve_year_bucket(seconds: i64) -> Option<DurationBucket> {
@@ -109,158 +133,6 @@ fn resolve_standard_bucket(seconds: i64) -> DurationBucket {
     }
 }
 
-fn resolve_year_bucket_range(base: i64, has_half: bool) -> Option<AbsoluteDurationRange> {
-    let unit = unit_by_kind(UnitKind::Year);
-    let policy = unit.policy;
-    let bucket = i128::from(policy.bucket_seconds);
-    let half = i128::from(threshold_seconds(
-        policy.half_threshold,
-        policy.bucket_seconds,
-    )?);
-    let round = i128::from(threshold_seconds(
-        policy.round_up_threshold,
-        policy.bucket_seconds,
-    )?);
-    let base_i = i128::from(base);
-
-    let (min, max) = if has_half {
-        (
-            base_i.checked_mul(bucket)?.checked_add(half)?,
-            base_i
-                .checked_mul(bucket)?
-                .checked_add(round)?
-                .checked_sub(1)?,
-        )
-    } else if base == 1 {
-        (
-            i128::from(policy.first_label_start_seconds),
-            bucket.checked_add(half)?.checked_sub(1)?,
-        )
-    } else {
-        (
-            (base_i.checked_sub(1)?)
-                .checked_mul(bucket)?
-                .checked_add(round)?,
-            base_i
-                .checked_mul(bucket)?
-                .checked_add(half)?
-                .checked_sub(1)?,
-        )
-    };
-
-    from_i128_range(min, max)
-}
-
-fn resolve_month_bucket_range(base: i64, has_half: bool) -> Option<AbsoluteDurationRange> {
-    let month = unit_by_kind(UnitKind::Month);
-    let month_policy = month.policy;
-    let year_policy = unit_by_kind(UnitKind::Year).policy;
-
-    let bucket = i128::from(month_policy.bucket_seconds);
-    let half = i128::from(threshold_seconds(
-        month_policy.half_threshold,
-        month_policy.bucket_seconds,
-    )?);
-    let round = i128::from(threshold_seconds(
-        month_policy.round_up_threshold,
-        month_policy.bucket_seconds,
-    )?);
-    let shift = bucket.checked_sub(round)?;
-    let base_i = i128::from(base);
-
-    let (mut min, mut max) = if has_half {
-        (
-            base_i
-                .checked_mul(bucket)?
-                .checked_add(half)?
-                .checked_sub(shift)?,
-            (base_i.checked_add(1)?.checked_mul(bucket)?.checked_sub(1)?).checked_sub(shift)?,
-        )
-    } else {
-        (
-            base_i.checked_mul(bucket)?.checked_sub(shift)?,
-            base_i
-                .checked_mul(bucket)?
-                .checked_add(half)?
-                .checked_sub(1)?
-                .checked_sub(shift)?,
-        )
-    };
-
-    min = min.max(i128::from(month_policy.first_label_start_seconds));
-    max = max.min(i128::from(year_policy.first_label_start_seconds).checked_sub(1)?);
-    from_i128_range(min, max)
-}
-
-fn resolve_standard_bucket_range(
-    kind: UnitKind,
-    base: i64,
-    has_half: bool,
-) -> Option<AbsoluteDurationRange> {
-    let unit = unit_by_kind(kind);
-    let policy = unit.policy;
-    let bucket = i128::from(policy.bucket_seconds);
-    let base_i = i128::from(base);
-
-    let half = threshold_seconds(policy.half_threshold, policy.bucket_seconds).map(i128::from);
-    let round = threshold_seconds(policy.round_up_threshold, policy.bucket_seconds).map(i128::from);
-
-    let mut ranges: Vec<(i128, i128)> = Vec::new();
-
-    if has_half {
-        let half = half?;
-        let upper_remainder = match policy.round_up_mode {
-            RoundUpMode::RemainderThreshold => round
-                .and_then(|v| v.checked_sub(1))
-                .unwrap_or_else(|| bucket - 1),
-            _ => bucket - 1,
-        };
-
-        ranges.push((
-            base_i.checked_mul(bucket)?.checked_add(half)?,
-            base_i.checked_mul(bucket)?.checked_add(upper_remainder)?,
-        ));
-    } else {
-        let upper_nonrounded = if let Some(half) = half {
-            half.checked_sub(1)?
-        } else if let Some(round) = round {
-            round.checked_sub(1)?
-        } else {
-            bucket.checked_sub(1)?
-        };
-        ranges.push((
-            base_i.checked_mul(bucket)?,
-            base_i.checked_mul(bucket)?.checked_add(upper_nonrounded)?,
-        ));
-
-        if policy.round_up_mode == RoundUpMode::RemainderThreshold && base > 1 {
-            let round = round?;
-            ranges.push((
-                (base_i.checked_sub(1)?)
-                    .checked_mul(bucket)?
-                    .checked_add(round)?,
-                base_i.checked_mul(bucket)?.checked_sub(1)?,
-            ));
-        }
-    }
-
-    ranges.sort_by_key(|(start, _)| *start);
-    let (mut min, mut max) = ranges.first().copied()?;
-    for (start, end) in ranges.into_iter().skip(1) {
-        if start > max.checked_add(1)? {
-            return None;
-        }
-        max = max.max(end);
-    }
-
-    min = min.max(i128::from(unit.seconds));
-    if let Some(selection_upper) = selection_upper_bound_seconds(kind) {
-        max = max.min(i128::from(selection_upper));
-    }
-
-    from_i128_range(min, max)
-}
-
 fn select_unit(seconds: i64) -> &'static Unit {
     UNITS
         .iter()
@@ -280,17 +152,6 @@ fn split_bucket(total: i64, bucket_seconds: i64) -> (i64, i64) {
 
 fn threshold_seconds(ratio: Option<Fraction>, bucket_seconds: i64) -> Option<i64> {
     ratio.map(|f| f.of(bucket_seconds))
-}
-
-fn selection_upper_bound_seconds(kind: UnitKind) -> Option<i64> {
-    let index = UNITS.iter().position(|unit| unit.kind == kind)?;
-    if index == 0 {
-        return None;
-    }
-
-    UNITS
-        .get(index.checked_sub(1)?)
-        .and_then(|higher| higher.seconds.checked_sub(1))
 }
 
 fn meets_threshold(remainder: i64, ratio: Option<Fraction>, bucket_seconds: i64) -> bool {

@@ -225,9 +225,10 @@ fn supports_native_korean_numbers_for_hour_and_month_when_enabled() {
 fn range_of_supports_korean_numeric_and_native_month_labels() {
     const DAY_SECONDS: i64 = 24 * 60 * 60;
 
+    // Literal/lenient semantics: "N 달" -> [N * 30d, (N+1) * 30d - 1].
     let numeric = range_of("2달 전", Locale::Ko).expect("valid expression");
-    assert_eq!(numeric.start_seconds, -((70 * DAY_SECONDS) - 1));
-    assert_eq!(numeric.end_seconds, -(55 * DAY_SECONDS));
+    assert_eq!(numeric.start_seconds, -((90 * DAY_SECONDS) - 1));
+    assert_eq!(numeric.end_seconds, -(60 * DAY_SECONDS));
 
     let native = range_of("두 달 전", Locale::Ko).expect("valid expression");
     assert_eq!(native, numeric);
@@ -238,21 +239,23 @@ fn range_of_supports_english_half_expression() {
     const DAY_SECONDS: i64 = 24 * 60 * 60;
 
     let range = range_of("a month and a half ago", Locale::En).expect("valid expression");
-    assert_eq!(range.start_seconds, -((55 * DAY_SECONDS) - 1));
-    assert_eq!(range.end_seconds, -(40 * DAY_SECONDS));
+    assert_eq!(range.start_seconds, -((60 * DAY_SECONDS) - 1));
+    assert_eq!(range.end_seconds, -(45 * DAY_SECONDS));
 }
 
 #[test]
-fn range_of_respects_year_start_policy() {
+fn range_of_uses_literal_bucket_for_year() {
     const DAY_SECONDS: i64 = 24 * 60 * 60;
 
+    // 1 year bucket = 12 * 30 = 360 days. Lenient semantics ignore the render-side
+    // 350-day first-label policy.
     let before_year = range_of("11 months and a half ago", Locale::En).expect("valid expression");
-    assert_eq!(before_year.start_seconds, -((350 * DAY_SECONDS) - 1));
-    assert_eq!(before_year.end_seconds, -(340 * DAY_SECONDS));
+    assert_eq!(before_year.start_seconds, -((360 * DAY_SECONDS) - 1));
+    assert_eq!(before_year.end_seconds, -(345 * DAY_SECONDS));
 
     let at_year = range_of("a year ago", Locale::En).expect("valid expression");
-    assert_eq!(at_year.start_seconds, -((480 * DAY_SECONDS) - 1));
-    assert_eq!(at_year.end_seconds, -(350 * DAY_SECONDS));
+    assert_eq!(at_year.start_seconds, -((720 * DAY_SECONDS) - 1));
+    assert_eq!(at_year.end_seconds, -(360 * DAY_SECONDS));
 }
 
 #[test]
@@ -260,15 +263,51 @@ fn range_of_supports_future_direction() {
     const DAY_SECONDS: i64 = 24 * 60 * 60;
 
     let range = range_of("2달 후", Locale::Ko).expect("valid expression");
-    assert_eq!(range.start_seconds, 55 * DAY_SECONDS);
-    assert_eq!(range.end_seconds, (70 * DAY_SECONDS) - 1);
+    assert_eq!(range.start_seconds, 60 * DAY_SECONDS);
+    assert_eq!(range.end_seconds, (90 * DAY_SECONDS) - 1);
+}
+
+#[test]
+fn range_of_accepts_units_outside_render_policy() {
+    const DAY_SECONDS: i64 = 24 * 60 * 60;
+
+    // "24일 전" — Day base above the render-side selection cap is now accepted.
+    let twenty_four_days = range_of("24일 전", Locale::Ko).expect("lenient day accepted");
+    assert_eq!(twenty_four_days.start_seconds, -((25 * DAY_SECONDS) - 1));
+    assert_eq!(twenty_four_days.end_seconds, -(24 * DAY_SECONDS));
+
+    // "60시간 전" — Hour base above selection cap.
+    let sixty_hours = range_of("60 hours ago", Locale::En).expect("lenient hour accepted");
+    assert_eq!(sixty_hours.start_seconds, -((61 * 3600) - 1));
+    assert_eq!(sixty_hours.end_seconds, -(60 * 3600));
+
+    // "2주 반 전" — half on a unit that has no render-side half threshold.
+    let two_and_half_weeks = range_of("2주 반 전", Locale::Ko).expect("half on weeks accepted");
+    assert_eq!(
+        two_and_half_weeks.start_seconds,
+        -((3 * 7 * DAY_SECONDS) - 1)
+    );
+    // 2 weeks + half week = 14d + 3d12h
+    assert_eq!(
+        two_and_half_weeks.end_seconds,
+        -(2 * 7 * DAY_SECONDS + (7 * DAY_SECONDS) / 2)
+    );
 }
 
 #[test]
 fn range_of_rejects_unsupported_or_invalid_expression() {
-    let impossible_half =
-        range_of("2주 반 전", Locale::Ko).expect_err("must reject unsupported half");
-    assert!(matches!(impossible_half, OotdError::InvalidExpression(_)));
+    // base < 1 is invalid for every unit.
+    let zero_base = range_of("0 days ago", Locale::En).expect_err("must reject base < 1");
+    assert!(matches!(zero_base, OotdError::InvalidExpression(_)));
+
+    // Half on seconds collapses (bucket / 2 == 0), so it is rejected.
+    let half_second =
+        range_of("2 seconds and a half ago", Locale::En).expect_err("must reject half-second");
+    assert!(matches!(half_second, OotdError::InvalidExpression(_)));
+
+    // Pure garbage stays rejected.
+    let garbage = range_of("not a time expression", Locale::En).expect_err("must reject garbage");
+    assert!(matches!(garbage, OotdError::InvalidExpression(_)));
 }
 
 #[test]
@@ -296,26 +335,25 @@ fn range_of_supports_english_daypart_alias_with_anchor() {
 }
 
 #[test]
-fn range_of_contains_original_duration_sample_roundtrip() {
-    let samples = [
-        (90_i64, Locale::En, Direction::Past),
-        (90 * 60, Locale::Ko, Direction::Past),
-        (2 * 60 * 60 + 50 * 60, Locale::En, Direction::Past),
-        (40 * 24 * 60 * 60, Locale::Ko, Direction::Past),
-        (55 * 24 * 60 * 60, Locale::Ko, Direction::Future),
-        (350 * 24 * 60 * 60, Locale::En, Direction::Past),
+fn range_of_contains_exact_bucket_boundary_for_each_unit() {
+    // Lenient range_of is no longer the exact inverse of render. It always covers
+    // `[N*bucket, (N+1)*bucket - 1]` for `N <unit>`, so the lower boundary must be
+    // contained in the parsed range.
+    let cases: &[(&str, Locale, i64)] = &[
+        ("1년 전", Locale::Ko, -(360 * 24 * 60 * 60)),
+        ("1달 전", Locale::Ko, -(30 * 24 * 60 * 60)),
+        ("1주 전", Locale::Ko, -(7 * 24 * 60 * 60)),
+        ("1일 전", Locale::Ko, -(24 * 60 * 60)),
+        ("1시간 전", Locale::Ko, -3600),
+        ("1분 전", Locale::Ko, -60),
+        ("1초 전", Locale::Ko, -1),
     ];
 
-    for (seconds, locale, direction) in samples {
-        let expression = from_duration(seconds, locale, direction).expect("must render expression");
-        let range = range_of(&expression, locale).expect("must parse rendered expression");
-        let signed = match direction {
-            Direction::Past => -seconds,
-            Direction::Future => seconds,
-        };
+    for (expression, locale, signed_boundary) in cases {
+        let range = range_of(expression, *locale).expect("must parse expression");
         assert!(
-            range.start_seconds <= signed && signed <= range.end_seconds,
-            "roundtrip failed: expr={expression}, signed={signed}, range=({},{})",
+            range.start_seconds <= *signed_boundary && *signed_boundary <= range.end_seconds,
+            "expr={expression}, boundary={signed_boundary}, range=({}, {})",
             range.start_seconds,
             range.end_seconds
         );
@@ -331,8 +369,9 @@ fn duration_range_resolve_at_uses_given_anchor_datetime() {
     let resolved = range.resolve_at(anchor).expect("must resolve");
     let (start, end) = resolved.to_rfc3339_pair();
 
-    assert_eq!(start, "2026-02-18T12:00:01+09:00");
-    assert_eq!(end, "2026-03-05T12:00:00+09:00");
+    // Lenient "두 달 전" = [60d, 90d-1s] past, anchored at 2026-04-29 12:00 +09:00.
+    assert_eq!(start, "2026-01-29T12:00:01+09:00");
+    assert_eq!(end, "2026-02-28T12:00:00+09:00");
 }
 
 #[test]
@@ -400,10 +439,22 @@ fn extract_expressions_finds_english_patterns() {
 
 #[test]
 fn extract_expressions_filters_invalid_matches() {
+    // Lenient range_of still rejects base < 1 ("0 days ago"), so the detector
+    // continues to filter that candidate out while keeping the valid one.
+    let q = "0 days ago and a week ago";
+    let found = extract_expressions(q, Locale::En);
+    let texts = found.iter().map(|it| it.text.as_str()).collect::<Vec<_>>();
+
+    assert_eq!(texts, vec!["a week ago"]);
+}
+
+#[test]
+fn extract_expressions_now_accepts_half_on_weeks() {
+    // Previously "2 weeks and a half ago" was rejected by range_of; under lenient
+    // semantics it is a valid candidate alongside "a week ago".
     let q = "2 weeks and a half ago and a week ago";
     let found = extract_expressions(q, Locale::En);
     let texts = found.iter().map(|it| it.text.as_str()).collect::<Vec<_>>();
 
-    // "2 weeks and a half ago" is intentionally unsupported by range_of.
-    assert_eq!(texts, vec!["a week ago"]);
+    assert_eq!(texts, vec!["2 weeks and a half ago", "a week ago"]);
 }
