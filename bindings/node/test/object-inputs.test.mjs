@@ -1,4 +1,4 @@
-import { between, fromDuration, rangeOf, TimestampRange } from '../api.js'
+import { between, extractExpressions, fromDuration, rangeOf, TimestampRange } from '../api.js'
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 
@@ -32,6 +32,9 @@ if (!dts.includes('export declare function rangeOf(')) {
 }
 if (!dts.includes('export declare class DurationRange')) {
   throw new Error('Node type declaration must expose DurationRange class')
+}
+if (!dts.includes('export declare function extractExpressions(')) {
+  throw new Error('Node type declaration must expose extractExpressions')
 }
 
 const expectedBetween = between(start, end, 'en')
@@ -106,6 +109,15 @@ if (
   daypartRange.end.toISOString() !== '2024-01-24T14:59:59.000Z'
 ) {
   throw new Error(`range.resolveAt(daypart) mismatch: ${JSON.stringify(daypartRange)}`)
+}
+
+const extracted = extractExpressions('지난 두 달 전 로그랑 어제 낮 결제', 'ko')
+if (
+  extracted.length !== 2 ||
+  extracted[0].text !== '두 달 전' ||
+  extracted[1].text !== '어제 낮'
+) {
+  throw new Error(`extractExpressions mismatch: ${JSON.stringify(extracted)}`)
 }
 
 assertThrows(

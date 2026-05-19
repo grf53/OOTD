@@ -379,3 +379,31 @@ fn duration_range_resolve_now_preserves_span() {
 
     assert_eq!(span_seconds, range.end_seconds - range.start_seconds);
 }
+
+#[test]
+fn extract_expressions_finds_korean_patterns() {
+    let q = "지난 두 달 전 로그랑 어제 낮 결제 내역 보여줘";
+    let found = extract_expressions(q, Locale::Ko);
+    let texts = found.iter().map(|it| it.text.as_str()).collect::<Vec<_>>();
+
+    assert_eq!(texts, vec!["두 달 전", "어제 낮"]);
+}
+
+#[test]
+fn extract_expressions_finds_english_patterns() {
+    let q = "show errors from 2 months ago and yesterday afternoon";
+    let found = extract_expressions(q, Locale::En);
+    let texts = found.iter().map(|it| it.text.as_str()).collect::<Vec<_>>();
+
+    assert_eq!(texts, vec!["2 months ago", "yesterday afternoon"]);
+}
+
+#[test]
+fn extract_expressions_filters_invalid_matches() {
+    let q = "2 weeks and a half ago and a week ago";
+    let found = extract_expressions(q, Locale::En);
+    let texts = found.iter().map(|it| it.text.as_str()).collect::<Vec<_>>();
+
+    // "2 weeks and a half ago" is intentionally unsupported by range_of.
+    assert_eq!(texts, vec!["a week ago"]);
+}

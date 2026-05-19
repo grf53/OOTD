@@ -5,11 +5,18 @@ which allows straightforward monkeypatching in tests.
 """
 
 from datetime import datetime, timedelta, timezone
-from typing import Any, Callable, Literal, Mapping, Optional, TypedDict, Union
+from typing import Any, Callable, List, Literal, Mapping, Optional, TypedDict, Union
 
 from . import _native
 
-__all__ = ["between", "from_duration", "range_of", "DurationRange", "TimestampRange"]
+__all__ = [
+    "between",
+    "from_duration",
+    "range_of",
+    "extract_expressions",
+    "DurationRange",
+    "TimestampRange",
+]
 
 
 DateLike = Union[str, datetime]
@@ -27,9 +34,16 @@ class TimestampRangeDict(TypedDict):
     end: datetime
 
 
+class ExpressionCandidateDict(TypedDict):
+    start: int
+    end: int
+    text: str
+
+
 BetweenImpl = Callable[[DateLike, DateLike, str, bool], str]
 FromDurationImpl = Callable[[DurationLike, bool, str, bool], str]
 RangeOfImpl = Callable[[str, str], Mapping[str, Any]]
+ExtractExpressionsImpl = Callable[[str, str], List[Mapping[str, Any]]]
 ResolveDurationRangeImpl = Callable[[int, int, Optional[str]], Mapping[str, Any]]
 RangeOfTimestampsImpl = Callable[[str, str, Optional[str]], Mapping[str, Any]]
 
@@ -37,6 +51,7 @@ RangeOfTimestampsImpl = Callable[[str, str, Optional[str]], Mapping[str, Any]]
 _between_impl: BetweenImpl = _native.between
 _from_duration_impl: FromDurationImpl = _native.from_duration
 _range_of_impl: RangeOfImpl = _native.range_of
+_extract_expressions_impl: ExtractExpressionsImpl = _native.extract_expressions
 _resolve_duration_range_impl: ResolveDurationRangeImpl = _native.resolve_duration_range
 _range_of_timestamps_impl: RangeOfTimestampsImpl = _native.range_of_timestamps
 
@@ -169,6 +184,24 @@ def range_of(
     if not isinstance(start, int) or not isinstance(end, int):
         raise ValueError("native range_of returned invalid range object")
     return DurationRange(start, end, expression, locale)
+
+
+def extract_expressions(input: str, locale: Locale = "en") -> List[ExpressionCandidateDict]:
+    out = _extract_expressions_impl(input, locale)
+    if not isinstance(out, list):
+        raise ValueError("native extract_expressions returned invalid value")
+
+    parsed: List[ExpressionCandidateDict] = []
+    for item in out:
+        if not isinstance(item, Mapping):
+            raise ValueError("native extract_expressions returned invalid candidate")
+        start = item.get("start")
+        end = item.get("end")
+        text = item.get("text")
+        if not isinstance(start, int) or not isinstance(end, int) or not isinstance(text, str):
+            raise ValueError("native extract_expressions returned invalid candidate")
+        parsed.append({"start": start, "end": end, "text": text})
+    return parsed
 
 
 def _coerce_to_rfc3339(value: DateLike) -> str:

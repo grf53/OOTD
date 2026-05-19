@@ -2,7 +2,7 @@ use std::fs;
 use std::path::PathBuf;
 
 const STUB_CONTENT: &str = r#"from datetime import datetime, timedelta
-from typing import Literal, Optional, TypedDict, Union
+from typing import List, Literal, Optional, TypedDict, Union
 
 DateLike = Union[str, datetime]
 DurationLike = Union[int, timedelta]
@@ -16,6 +16,11 @@ class DurationRangeDict(TypedDict):
 class TimestampRangeDict(TypedDict):
     start: datetime
     end: datetime
+
+class ExpressionCandidateDict(TypedDict):
+    start: int
+    end: int
+    text: str
 
 class TimestampRange:
     start: datetime
@@ -63,6 +68,11 @@ def range_of(
     expression: str,
     locale: Locale = ...,
 ) -> DurationRange: ...
+
+def extract_expressions(
+    input: str,
+    locale: Locale = ...,
+) -> List[ExpressionCandidateDict]: ...
 "#;
 
 fn main() {

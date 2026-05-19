@@ -1,6 +1,13 @@
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
-import { between, DurationRange, fromDuration, rangeOf, TimestampRange } from '../api.js'
+import {
+  between,
+  DurationRange,
+  extractExpressions,
+  fromDuration,
+  rangeOf,
+  TimestampRange,
+} from '../api.js'
 
 const dts = readFileSync(resolve(process.cwd(), 'api.d.ts'), 'utf-8')
 if (!dts.includes("export type Locale = 'en' | 'ko'")) {
@@ -11,6 +18,9 @@ if (!dts.includes('export declare class DurationRange')) {
 }
 if (!dts.includes('export declare class TimestampRange')) {
   throw new Error('WASM type declaration must expose TimestampRange class')
+}
+if (!dts.includes('export declare function extractExpressions(')) {
+  throw new Error('WASM type declaration must expose extractExpressions')
 }
 
 const fixture = JSON.parse(
@@ -73,4 +83,13 @@ if (
   daypartTsRange.end.toISOString() !== '2024-01-24T14:59:59.000Z'
 ) {
   throw new Error(`range.resolveAt(daypart) case failed: ${JSON.stringify(daypartTsRange)}`)
+}
+
+const extracted = extractExpressions('지난 두 달 전 로그랑 어제 낮 결제', 'ko')
+if (
+  extracted.length !== 2 ||
+  extracted[0].text !== '두 달 전' ||
+  extracted[1].text !== '어제 낮'
+) {
+  throw new Error(`extractExpressions mismatch: ${JSON.stringify(extracted)}`)
 }

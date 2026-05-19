@@ -25,3 +25,8 @@ def test_duration_range_resolve_at_with_anchor():
     assert isinstance(out, ootd.TimestampRange)
     assert out.start == datetime.fromisoformat("2026-02-18T12:00:01+09:00")
     assert out.end == datetime.fromisoformat("2026-03-05T12:00:00+09:00")
+
+
+def test_extract_expressions():
+    out = ootd.extract_expressions("지난 두 달 전 로그랑 어제 낮 결제", "ko")
+    assert [x["text"] for x in out] == ["두 달 전", "어제 낮"]

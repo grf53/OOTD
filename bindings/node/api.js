@@ -162,10 +162,37 @@ function rangeOf(expression, locale = 'en') {
   return new DurationRange(start, end, expression, locale)
 }
 
+function extractExpressions(input, locale = 'en') {
+  if (typeof input !== 'string') {
+    throw new TypeError('input must be a string')
+  }
+
+  const raw = native.extractExpressions(input, locale)
+  if (!Array.isArray(raw)) {
+    throw new TypeError('native extractExpressions returned invalid value')
+  }
+
+  return raw.map((it) => {
+    if (
+      typeof it?.start !== 'number' ||
+      typeof it?.end !== 'number' ||
+      typeof it?.text !== 'string'
+    ) {
+      throw new TypeError('native extractExpressions returned invalid candidate')
+    }
+    return {
+      start: it.start,
+      end: it.end,
+      text: it.text,
+    }
+  })
+}
+
 module.exports = {
   between,
   fromDuration,
   rangeOf,
+  extractExpressions,
   DurationRange,
   TimestampRange,
 }

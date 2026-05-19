@@ -23,6 +23,10 @@ ts = r.resolve_at("2026-04-29T12:00:00Z")
 print(f"Between {ts.start} and {ts.end}.")
 # Between 2026-02-18 12:00:01Z and 2026-03-05 12:00:00Z.
 
+# query text -> parseable expression candidates
+print(ootd.extract_expressions("지난 두 달 전 로그랑 어제 낮 결제", "ko"))
+# [{'start': 3, 'end': 8, 'text': '두 달 전'}, {'start': 12, 'end': 15, 'text': '어제 낮'}]
+
 # locale support
 print(ootd.between("2026-03-09T18:21:29Z", "2026-05-03T19:31:43Z",
                    locale="ko", use_native_ko_number=True))
@@ -131,12 +135,15 @@ print(ootd.between(
 r = ootd.range_of("두 달 전", "ko")
 ts = r.resolve_at("2026-04-29T12:00:00+09:00")
 # ts.start, ts.end are timezone-aware datetime
+
+print(ootd.extract_expressions("지난 두 달 전 로그랑 어제 낮 결제", "ko"))
+# [{'start': 3, 'end': 8, 'text': '두 달 전'}, {'start': 12, 'end': 15, 'text': '어제 낮'}]
 ```
 
 ### TypeScript Node
 
 ```ts
-import { between, rangeOf } from '@ootd/node'
+import { between, extractExpressions, rangeOf } from '@ootd/node'
 
 console.log(between('2026-03-09T18:21:29Z', '2026-05-03T19:31:43Z', 'en'))
 // 2 months ago
@@ -147,12 +154,15 @@ console.log(between('2026-03-09T18:21:29Z', '2026-05-03T19:31:43Z', 'ko', true))
 const r = rangeOf('두 달 전', 'ko')
 const ts = r.resolveAt('2026-04-29T12:00:00+09:00')
 // ts.start, ts.end are Date
+
+console.log(extractExpressions('지난 두 달 전 로그랑 어제 낮 결제', 'ko'))
+// [{ start: 3, end: 8, text: '두 달 전' }, { start: 12, end: 15, text: '어제 낮' }]
 ```
 
 ### TypeScript Browser WebAssembly
 
 ```ts
-import { between, rangeOf } from '@ootd/wasm'
+import { between, extractExpressions, rangeOf } from '@ootd/wasm'
 
 console.log(between('2026-03-09T18:21:29Z', '2026-05-03T19:31:43Z', 'en'))
 // 2 months ago
@@ -163,6 +173,9 @@ console.log(between('2026-03-09T18:21:29Z', '2026-05-03T19:31:43Z', 'ko', true))
 const r = rangeOf('두 달 전', 'ko')
 const ts = r.resolveAt('2026-04-29T12:00:00+09:00')
 // ts.start, ts.end are Date
+
+console.log(extractExpressions('지난 두 달 전 로그랑 어제 낮 결제', 'ko'))
+// [{ start: 3, end: 8, text: '두 달 전' }, { start: 12, end: 15, text: '어제 낮' }]
 ```
 
 ### Java
@@ -189,6 +202,9 @@ String ko = Ootd.between(
 var r = Ootd.rangeOf("두 달 전", Locale.KO);
 var ts = r.resolveAt("2026-04-29T12:00:00+09:00");
 // ts.start(), ts.end() are OffsetDateTime
+
+var extracted = Ootd.extractExpressions("지난 두 달 전 로그랑 어제 낮 결제", Locale.KO);
+// extracted.get(0).text() == "두 달 전"
 ```
 
 ### Kotlin
@@ -206,6 +222,9 @@ println(Ootd.between("2026-03-09T18:21:29Z", "2026-05-03T19:31:43Z", Locale.KO, 
 val r = Ootd.rangeOf("두 달 전", Locale.KO)
 val ts = r.resolveAt("2026-04-29T12:00:00+09:00")
 // ts.start(), ts.end()
+
+val extracted = Ootd.extractExpressions("지난 두 달 전 로그랑 어제 낮 결제", Locale.KO)
+// extracted[0].text() == "두 달 전"
 ```
 
 ### Swift
@@ -231,6 +250,9 @@ let ko = try OOTD.between(
 let r = try OOTD.rangeOf(expression: "두 달 전", locale: .ko)
 let ts = try r.resolveAt("2026-04-29T12:00:00+09:00")
 // ts.start, ts.end are Date
+
+let extracted = OOTD.extractExpressions(input: "지난 두 달 전 로그랑 어제 낮 결제", locale: .ko)
+// extracted[0].text == "두 달 전"
 ```
 
 ## API Shape
@@ -241,6 +263,7 @@ Core operations are the same across bindings and form a bidirectional flow:
 | --- | --- | --- |
 | `between(start, end, locale, options)` | You have two timestamp instants. | `end - start` decides past/future. |
 | `from_duration(seconds, is_future, locale, options)` | You already have an elapsed duration. | `is_future=False` renders past, `True` renders future. |
+| `extract_expressions(input, locale)` | You have free-text query input. | Extracts parseable relative-time expression candidates. |
 | `range_of(expression, locale)` | You have a relative phrase like `두 달 전`, `yesterday afternoon`. | Returns a duration range relative to an anchor. |
 | `duration_range.resolve_at(anchor)` | You want concrete query timestamps. | Resolves to absolute timestamp range usable directly in queries. |
 

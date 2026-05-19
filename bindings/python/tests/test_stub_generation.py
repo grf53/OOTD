@@ -8,6 +8,7 @@ def test_generated_pyi_exists_and_has_signatures():
     assert "def between(" in text
     assert "def from_duration(" in text
     assert "def range_of(" in text
+    assert "def extract_expressions(" in text
     assert "def resolve_at(" in text
     assert "use_native_ko_number" in text
     assert 'Locale = Literal["en", "ko"]' in text

@@ -58,4 +58,11 @@ object Ootd {
         expression: String,
         locale: Locale = Locale.EN,
     ): JavaOotd.DurationRange = JavaOotd.rangeOf(expression, locale)
+
+    @JvmStatic
+    @JvmOverloads
+    fun extractExpressions(
+        input: String,
+        locale: Locale = Locale.EN,
+    ): List<JavaOotd.ExpressionCandidate> = JavaOotd.extractExpressions(input, locale)
 }

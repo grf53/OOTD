@@ -4,6 +4,7 @@ import {
   rangeOf as nativeRangeOf,
   rangeOfTimestamps as nativeRangeOfTimestamps,
   resolveDurationRange as nativeResolveDurationRange,
+  extractExpressions as nativeExtractExpressions,
 } from './pkg/ootd_wasm.js'
 
 const MIN_SAFE_BIGINT = BigInt(Number.MIN_SAFE_INTEGER)
@@ -220,4 +221,30 @@ export function rangeOf(expression, locale = 'en') {
   }
 
   return new DurationRange(start, end, expression, locale)
+}
+
+export function extractExpressions(input, locale = 'en') {
+  if (typeof input !== 'string') {
+    throw new TypeError('input must be a string')
+  }
+
+  const raw = nativeExtractExpressions(input, locale)
+  if (!Array.isArray(raw)) {
+    throw new TypeError('native extractExpressions returned invalid value')
+  }
+
+  return raw.map((it) => {
+    if (
+      typeof it?.start !== 'number' ||
+      typeof it?.end !== 'number' ||
+      typeof it?.text !== 'string'
+    ) {
+      throw new TypeError('native extractExpressions returned invalid candidate')
+    }
+    return {
+      start: it.start,
+      end: it.end,
+      text: it.text,
+    }
+  })
 }

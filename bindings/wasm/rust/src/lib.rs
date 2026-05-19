@@ -1,7 +1,7 @@
 use js_sys::{Object, Reflect};
 use ootd_core::{
-    between_rfc3339_with_options, from_duration_with_options, range_of, range_of_at_rfc3339,
-    Direction, DurationRange as CoreDurationRange, Locale, RenderOptions,
+    between_rfc3339_with_options, extract_expressions, from_duration_with_options, range_of,
+    range_of_at_rfc3339, Direction, DurationRange as CoreDurationRange, Locale, RenderOptions,
 };
 use std::str::FromStr;
 use wasm_bindgen::prelude::*;
@@ -139,6 +139,30 @@ pub fn range_of_timestamps_wasm(
     )?;
 
     Ok(out.into())
+}
+
+#[wasm_bindgen(js_name = extractExpressions)]
+pub fn extract_expressions_wasm(input: &str, locale: Option<String>) -> Result<JsValue, JsValue> {
+    let locale = locale.unwrap_or_else(|| "en".to_string());
+    let locale = Locale::from_str(&locale).map_err(|e| JsValue::from_str(&e.to_string()))?;
+    let candidates = extract_expressions(input, locale);
+    let arr = js_sys::Array::new();
+    for c in candidates {
+        let out = Object::new();
+        Reflect::set(
+            &out,
+            &JsValue::from_str("start"),
+            &JsValue::from_f64(c.start as f64),
+        )?;
+        Reflect::set(
+            &out,
+            &JsValue::from_str("end"),
+            &JsValue::from_f64(c.end as f64),
+        )?;
+        Reflect::set(&out, &JsValue::from_str("text"), &JsValue::from_str(&c.text))?;
+        arr.push(&out);
+    }
+    Ok(arr.into())
 }
 
 fn coerce_js_seconds(value: f64) -> Result<i64, JsValue> {

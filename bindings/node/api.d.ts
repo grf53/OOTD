@@ -17,6 +17,11 @@ export declare class DurationRange {
   end: number
   resolveAt(anchorRfc3339?: DateLike): TimestampRange
 }
+export type ExpressionCandidate = {
+  start: number
+  end: number
+  text: string
+}
 
 export declare function between(
   startRfc3339: DateLike,
@@ -36,3 +41,8 @@ export declare function rangeOf(
   expression: string,
   locale?: Locale
 ): DurationRange
+
+export declare function extractExpressions(
+  input: string,
+  locale?: Locale
+): ExpressionCandidate[]

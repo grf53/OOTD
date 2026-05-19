@@ -15,6 +15,8 @@ import java.time.OffsetDateTime;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Objects;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import static java.lang.foreign.ValueLayout.ADDRESS;
 import static java.lang.foreign.ValueLayout.JAVA_BOOLEAN;
@@ -69,6 +71,12 @@ public final class Ootd {
     public record TimestampRange(
             OffsetDateTime start,
             OffsetDateTime end
+    ) {}
+
+    public record ExpressionCandidate(
+            int start,
+            int end,
+            String text
     ) {}
 
     private Ootd() {}
@@ -272,6 +280,53 @@ public final class Ootd {
         return rangeOf(expression, safeLocale.code());
     }
 
+    public static List<ExpressionCandidate> extractExpressions(String input, Locale locale) {
+        Objects.requireNonNull(input, "input must not be null");
+        Locale safeLocale = locale == null ? Locale.EN : locale;
+
+        List<ExpressionCandidate> raw = new ArrayList<>();
+        for (Pattern p : localePatterns(safeLocale)) {
+            Matcher m = p.matcher(input);
+            while (m.find()) {
+                String text = m.group().trim();
+                if (text.isEmpty()) {
+                    continue;
+                }
+                try {
+                    rangeOf(text, safeLocale);
+                    raw.add(new ExpressionCandidate(m.start(), m.end(), text));
+                } catch (IllegalArgumentException ignored) {
+                    // keep only parseable range expressions.
+                }
+            }
+        }
+
+        raw.sort((a, b) -> {
+            int lenA = a.end() - a.start();
+            int lenB = b.end() - b.start();
+            if (lenA != lenB) {
+                return Integer.compare(lenB, lenA);
+            }
+            return Integer.compare(a.start(), b.start());
+        });
+
+        List<ExpressionCandidate> selected = new ArrayList<>();
+        for (ExpressionCandidate c : raw) {
+            boolean overlap = false;
+            for (ExpressionCandidate s : selected) {
+                if (s.start() < c.end() && c.start() < s.end()) {
+                    overlap = true;
+                    break;
+                }
+            }
+            if (!overlap) {
+                selected.add(c);
+            }
+        }
+        selected.sort((a, b) -> Integer.compare(a.start(), b.start()));
+        return selected;
+    }
+
     public static DurationRange rangeOf(String expression, String locale) {
         Objects.requireNonNull(expression, "expression must not be null");
         String safeLocale = locale == null ? "en" : locale;
@@ -367,5 +422,19 @@ public final class Ootd {
         String out = cstr.getString(0);
         FREE.invoke(raw);
         return out;
+    }
+
+    private static List<Pattern> localePatterns(Locale locale) {
+        if (locale == Locale.KO) {
+            return List.of(
+                    Pattern.compile("([0-9]{1,3}|[가-힣]{1,8})\\s*(년|달|주|일|시간|분|초)(\\s*반)?\\s*(전|후)"),
+                    Pattern.compile("(어제|오늘|내일)\\s*(새벽|아침|낮|저녁|밤)")
+            );
+        }
+        return List.of(
+                Pattern.compile("(?i)\\b(a|an|\\d+)\\s+(year|years|month|months|week|weeks|day|days|hour|hours|minute|minutes|second|seconds)(\\s+and\\s+a\\s+half)?\\s+(ago|later)\\b"),
+                Pattern.compile("(?i)\\b(yesterday|this|tomorrow)\\s+(dawn|morning|afternoon|evening|night)\\b"),
+                Pattern.compile("(?i)\\b(last night|earlier tonight|tonight)\\b")
+        );
     }
 }

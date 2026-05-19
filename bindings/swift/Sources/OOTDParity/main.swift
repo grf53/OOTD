@@ -184,6 +184,11 @@ struct OOTDParityRunner {
             failures.append("rangeOf/resolveAt threw: \(error)")
         }
 
+        let extracted = OOTD.extractExpressions(input: "지난 두 달 전 로그랑 어제 낮 결제", locale: .ko)
+        if extracted.count != 2 || extracted[0].text != "두 달 전" || extracted[1].text != "어제 낮" {
+            failures.append("extractExpressions mismatch: \(extracted)")
+        }
+
         if !failures.isEmpty {
             throw RunnerError.failures(failures)
         }

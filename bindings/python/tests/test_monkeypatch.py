@@ -45,3 +45,12 @@ def test_resolve_duration_range_monkeypatch(monkeypatch):
     assert out["meta"] == "-6047999:-4752000:2026-04-29T12:00:00+09:00"
     assert out.start == datetime.fromisoformat("2026-01-01T00:00:00+00:00")
     assert out.end == datetime.fromisoformat("2026-01-02T00:00:00+00:00")
+
+
+def test_extract_expressions_monkeypatch(monkeypatch):
+    def fake_extract_expressions(input, locale="en"):
+        return [{"start": 3, "end": 8, "text": "두 달 전"}]
+
+    monkeypatch.setattr(ootd, "_extract_expressions_impl", fake_extract_expressions)
+    out = ootd.extract_expressions("지난 두 달 전 로그", "ko")
+    assert out == [{"start": 3, "end": 8, "text": "두 달 전"}]

@@ -56,4 +56,12 @@ class OotdKotlinTest {
         assertEquals(OffsetDateTime.parse("2026-02-18T12:00:01+09:00"), resolved.start())
         assertEquals(OffsetDateTime.parse("2026-03-05T12:00:00+09:00"), resolved.end())
     }
+
+    @Test
+    fun extractsExpressions() {
+        val out = Ootd.extractExpressions("지난 두 달 전 로그랑 어제 낮 결제", Locale.KO)
+        assertEquals(2, out.size)
+        assertEquals("두 달 전", out[0].text())
+        assertEquals("어제 낮", out[1].text())
+    }
 }

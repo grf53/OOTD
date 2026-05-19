@@ -1,6 +1,6 @@
 use ootd_core::{
-    between_rfc3339_with_options, from_duration_with_options, range_of, range_of_at_rfc3339,
-    Direction, DurationRange as CoreDurationRange, Locale, RenderOptions,
+    between_rfc3339_with_options, extract_expressions, from_duration_with_options, range_of,
+    range_of_at_rfc3339, Direction, DurationRange as CoreDurationRange, Locale, RenderOptions,
 };
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
@@ -117,6 +117,21 @@ fn range_of_timestamps_py(
     Ok(out.into_py(py))
 }
 
+#[pyfunction(name = "extract_expressions")]
+#[pyo3(signature = (input, locale="en"))]
+fn extract_expressions_py(py: Python<'_>, input: &str, locale: &str) -> PyResult<PyObject> {
+    let locale = Locale::from_str(locale).map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let list = pyo3::types::PyList::empty_bound(py);
+    for c in extract_expressions(input, locale) {
+        let item = PyDict::new_bound(py);
+        item.set_item("start", c.start)?;
+        item.set_item("end", c.end)?;
+        item.set_item("text", c.text)?;
+        list.append(item)?;
+    }
+    Ok(list.into_py(py))
+}
+
 fn coerce_to_seconds(value: &Bound<'_, PyAny>) -> PyResult<i64> {
     if let Ok(seconds) = value.extract::<i64>() {
         return Ok(seconds);
@@ -173,6 +188,7 @@ fn _native(_py: Python<'_>, module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_function(wrap_pyfunction!(between, module)?)?;
     module.add_function(wrap_pyfunction!(from_duration_py, module)?)?;
     module.add_function(wrap_pyfunction!(range_of_py, module)?)?;
+    module.add_function(wrap_pyfunction!(extract_expressions_py, module)?)?;
     module.add_function(wrap_pyfunction!(resolve_duration_range_py, module)?)?;
     module.add_function(wrap_pyfunction!(range_of_timestamps_py, module)?)?;
     Ok(())

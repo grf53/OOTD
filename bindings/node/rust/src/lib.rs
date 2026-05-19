@@ -1,8 +1,8 @@
 use napi::bindgen_prelude::Error;
 use napi_derive::napi;
 use ootd_core::{
-    between_rfc3339_with_options, from_duration_with_options, range_of, range_of_at_rfc3339,
-    Direction, DurationRange as CoreDurationRange, Locale, RenderOptions,
+    between_rfc3339_with_options, extract_expressions, from_duration_with_options, range_of,
+    range_of_at_rfc3339, Direction, DurationRange as CoreDurationRange, Locale, RenderOptions,
 };
 use std::str::FromStr;
 
@@ -16,6 +16,13 @@ pub struct DurationRange {
 pub struct TimestampRange {
     pub start: String,
     pub end: String,
+}
+
+#[napi(object)]
+pub struct ExpressionCandidate {
+    pub start: i64,
+    pub end: i64,
+    pub text: String,
 }
 
 #[napi]
@@ -120,4 +127,22 @@ pub fn range_of_timestamps_ts(
         start: resolved.start.to_rfc3339(),
         end: resolved.end.to_rfc3339(),
     })
+}
+
+#[napi(js_name = "extractExpressions")]
+pub fn extract_expressions_ts(
+    input: String,
+    locale: Option<String>,
+) -> napi::Result<Vec<ExpressionCandidate>> {
+    let locale = locale.unwrap_or_else(|| "en".to_string());
+    let locale = Locale::from_str(&locale).map_err(|e| Error::from_reason(e.to_string()))?;
+    let out = extract_expressions(&input, locale)
+        .into_iter()
+        .map(|it| ExpressionCandidate {
+            start: it.start as i64,
+            end: it.end as i64,
+            text: it.text,
+        })
+        .collect::<Vec<_>>();
+    Ok(out)
 }

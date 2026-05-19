@@ -1,5 +1,6 @@
 use chrono::{DateTime, Duration, FixedOffset};
 
+use crate::detect::{extract_expressions_impl, ExpressionCandidate};
 use crate::daypart::between_daypart;
 use crate::expression::range_of_impl;
 use crate::render::render_duration_nonnegative;
@@ -95,4 +96,8 @@ pub fn range_of_at_rfc3339(
     let anchor = DateTime::parse_from_rfc3339(anchor_rfc3339)
         .map_err(|_| OotdError::InvalidDatetime(anchor_rfc3339.to_string()))?;
     range_of_at(expression, locale, anchor)
+}
+
+pub fn extract_expressions(input: &str, locale: Locale) -> Vec<ExpressionCandidate> {
+    extract_expressions_impl(input, locale)
 }

@@ -61,6 +61,12 @@ public struct OOTDTimestampRange: Equatable {
     }
 }
 
+public struct OOTDExpressionCandidate: Equatable {
+    public let start: Int
+    public let end: Int
+    public let text: String
+}
+
 private typealias BetweenFn = @convention(c) (
     UnsafePointer<CChar>?,
     UnsafePointer<CChar>?,
@@ -338,6 +344,66 @@ public enum OOTD {
             start: .seconds(Double(startSeconds)),
             end: .seconds(Double(endSeconds))
         )
+    }
+
+    public static func extractExpressions(
+        input: String,
+        locale: OOTDLocale = .en
+    ) -> [OOTDExpressionCandidate] {
+        let patterns: [String]
+        switch locale {
+        case .ko:
+            patterns = [
+                #"([0-9]{1,3}|[가-힣]{1,8})\s*(년|달|주|일|시간|분|초)(\s*반)?\s*(전|후)"#,
+                #"(어제|오늘|내일)\s*(새벽|아침|낮|저녁|밤)"#,
+            ]
+        case .en:
+            patterns = [
+                #"(?i)\b(a|an|\d+)\s+(year|years|month|months|week|weeks|day|days|hour|hours|minute|minutes|second|seconds)(\s+and\s+a\s+half)?\s+(ago|later)\b"#,
+                #"(?i)\b(yesterday|this|tomorrow)\s+(dawn|morning|afternoon|evening|night)\b"#,
+                #"(?i)\b(last night|earlier tonight|tonight)\b"#,
+            ]
+        }
+
+        var raw: [OOTDExpressionCandidate] = []
+        for pattern in patterns {
+            guard let re = try? NSRegularExpression(pattern: pattern) else { continue }
+            for m in re.matches(in: input, range: NSRange(input.startIndex..., in: input)) {
+                guard let range = Range(m.range, in: input) else { continue }
+                let text = String(input[range]).trimmingCharacters(in: .whitespacesAndNewlines)
+                if text.isEmpty {
+                    continue
+                }
+                if (try? rangeOf(expression: text, locale: locale)) != nil {
+                    raw.append(
+                        OOTDExpressionCandidate(
+                            start: m.range.location,
+                            end: m.range.location + m.range.length,
+                            text: text
+                        )
+                    )
+                }
+            }
+        }
+
+        raw.sort {
+            let len0 = $0.end - $0.start
+            let len1 = $1.end - $1.start
+            if len0 != len1 {
+                return len0 > len1
+            }
+            return $0.start < $1.start
+        }
+
+        var selected: [OOTDExpressionCandidate] = []
+        for c in raw {
+            let overlap = selected.contains(where: { s in s.start < c.end && c.start < s.end })
+            if !overlap {
+                selected.append(c)
+            }
+        }
+        selected.sort { $0.start < $1.start }
+        return selected
     }
 
     fileprivate static func resolveDurationRangeAt(

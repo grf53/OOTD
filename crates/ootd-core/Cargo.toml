@@ -9,6 +9,7 @@ repository.workspace = true
 [dependencies]
 chrono.workspace = true
 thiserror.workspace = true
+regex.workspace = true
 
 [dev-dependencies]
 serde.workspace = true
